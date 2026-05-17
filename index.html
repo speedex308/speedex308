@@ -4,31 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>Speedex308 — форум скорости</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: #030303; color: #d7dadc; min-height: 100vh;
-      display: flex; justify-content: center; padding: 0; position: relative; overflow-x: hidden;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #030303; color: #d7dadc; min-height: 100vh; display: flex; justify-content: center; padding: 0; position: relative; overflow-x: hidden; }
     .speed-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden; }
-    .speed-line-bg { position: absolute; height: 1px; background: linear-gradient(90deg, transparent, rgba(0, 255, 200, 0.25), transparent); animation: lineShoot linear infinite; }
+    .speed-line-bg { position: absolute; height: 1px; background: linear-gradient(90deg, transparent, rgba(0,255,200,0.25), transparent); animation: lineShoot linear infinite; }
     @keyframes lineShoot { 0% { transform: translateX(-100%); opacity: 0; } 20% { opacity: 0.6; } 80% { opacity: 0.3; } 100% { transform: translateX(110vw); opacity: 0; } }
-    .app-container { position: relative; z-index: 10; display: flex; gap: 1.5rem; max-width: 1000px; width: 100%; margin: 1.5rem; align-items: flex-start; }
-    .sidebar { width: 240px; background: #1a1a1b; border: 1px solid #343536; border-radius: 4px; padding: 1rem; position: sticky; top: 1.5rem; flex-shrink: 0; display: flex; flex-direction: column; gap: 0.8rem; }
+    .app-container { position: relative; z-index: 10; display: flex; gap: 1.5rem; max-width: 1100px; width: 100%; margin: 1.5rem; align-items: flex-start; }
+    .sidebar { width: 260px; background: #1a1a1b; border: 1px solid #343536; border-radius: 4px; padding: 1rem; position: sticky; top: 1.5rem; flex-shrink: 0; display: flex; flex-direction: column; gap: 0.8rem; }
     .sidebar-header { display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.8rem; border-bottom: 1px solid #343536; }
     .sidebar-logo { font-size: 1.6rem; color: #00ffcc; }
     .sidebar-title { font-weight: 700; font-size: 1.2rem; color: #d7dadc; }
     .sidebar-nav { display: flex; flex-direction: column; gap: 0.3rem; }
-    .sidebar-link { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.8rem; border-radius: 4px; color: #818384; text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: 0.15s; cursor: pointer; }
+    .sidebar-link { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.8rem; border-radius: 4px; color: #818384; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: 0.15s; }
     .sidebar-link:hover { background: #272729; color: #d7dadc; }
     .sidebar-link.active { background: #272729; color: #00ffcc; font-weight: 600; }
     .sidebar-link i { width: 20px; text-align: center; }
+    .user-section { border-top: 1px solid #343536; padding-top: 0.8rem; }
+    .user-info { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; }
+    .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #00ffcc; color: #000; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; }
+    .user-name { font-weight: 600; font-size: 0.85rem; flex: 1; }
+    .karma-badge { font-size: 0.7rem; color: #00ffcc; }
     .sidebar-footer { margin-top: auto; font-size: 0.7rem; color: #818384; text-align: center; padding-top: 0.5rem; }
     .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.8rem; }
+    .search-bar { background: #1a1a1b; border: 1px solid #343536; border-radius: 4px; padding: 0.5rem 1rem; display: flex; gap: 0.5rem; }
+    .search-input { flex: 1; background: #272729; border: 1px solid #343536; border-radius: 20px; padding: 0.5rem 1rem; color: #d7dadc; font-size: 0.9rem; outline: none; }
+    .search-input:focus { border-color: #00ffcc; }
     .create-post-btn { background: #1a1a1b; border: 1px solid #343536; border-radius: 4px; padding: 0.8rem 1rem; display: flex; align-items: center; gap: 0.8rem; cursor: pointer; transition: 0.2s; }
     .create-post-btn:hover { border-color: #00ffcc55; }
     .create-placeholder { flex: 1; background: #272729; border: 1px solid #343536; border-radius: 4px; padding: 0.6rem 1rem; color: #818384; font-size: 0.9rem; }
@@ -36,7 +42,7 @@
     .sort-btn { background: none; border: none; color: #818384; font-weight: 600; font-size: 0.85rem; padding: 0.3rem 0.8rem; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; transition: 0.15s; }
     .sort-btn:hover { background: #272729; color: #d7dadc; }
     .sort-btn.active-sort { background: #272729; color: #00ffcc; }
-    .posts-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .posts-list { display: flex; flex-direction: column; gap: 0.5rem; min-height: 200px; }
     .post-card { background: #1a1a1b; border: 1px solid #343536; border-radius: 4px; display: flex; transition: 0.15s; cursor: pointer; }
     .post-card:hover { border-color: #00ffcc55; box-shadow: 0 0 12px rgba(0,255,200,0.1); }
     .vote-column { display: flex; flex-direction: column; align-items: center; padding: 0.6rem 0.5rem; background: #161617; border-radius: 4px 0 0 4px; gap: 0.2rem; min-width: 40px; }
@@ -50,16 +56,21 @@
     .post-author { font-weight: 700; color: #00ffcc; cursor: pointer; }
     .post-author:hover { text-decoration: underline; }
     .nsfw-badge { background: #ff4466; color: white; font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 3px; margin-left: 0.3rem; }
-    .post-title-link { font-size: 1.1rem; font-weight: 600; color: #d7dadc; text-decoration: none; display: block; margin-bottom: 0.3rem; word-break: break-word; }
+    .post-title-link { font-size: 1.1rem; font-weight: 600; color: #d7dadc; display: block; margin-bottom: 0.3rem; word-break: break-word; }
     .post-body-preview { color: #9a9da0; font-size: 0.9rem; line-height: 1.4; max-height: 80px; overflow: hidden; white-space: pre-wrap; word-break: break-word; }
     .post-image-preview { max-width: 100%; max-height: 200px; border-radius: 4px; margin-top: 0.5rem; object-fit: cover; }
     .post-actions { display: flex; gap: 1.2rem; margin-top: 0.4rem; align-items: center; }
     .post-action-btn { background: none; border: none; color: #818384; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.5rem; border-radius: 4px; transition: 0.15s; }
     .post-action-btn:hover { background: #272729; color: #d7dadc; }
+    .pagination { display: flex; gap: 0.5rem; justify-content: center; align-items: center; padding: 1rem; }
+    .page-btn { background: #272729; border: 1px solid #343536; color: #d7dadc; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; }
+    .page-btn:hover { background: #00ffcc; color: #000; }
+    .page-btn.active { background: #00ffcc; color: #000; font-weight: 700; }
+    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
     .empty-state { text-align: center; padding: 2rem; color: #818384; }
     .loading-state { text-align: center; padding: 2rem; color: #00ffcc; }
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s; }
-    .modal { background: #1a1a1b; border: 1px solid #343536; border-radius: 4px; width: 90%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column; }
+    .modal { background: #1a1a1b; border: 1px solid #343536; border-radius: 4px; width: 90%; max-width: 750px; max-height: 90vh; display: flex; flex-direction: column; }
     .modal-header { padding: 1rem; border-bottom: 1px solid #343536; display: flex; justify-content: space-between; align-items: center; }
     .modal-title { font-weight: 600; font-size: 1.1rem; }
     .close-btn { background: none; border: none; color: #818384; font-size: 1.4rem; cursor: pointer; padding: 0.3rem; }
@@ -68,23 +79,32 @@
     .input-field { background: #272729; border: 1px solid #343536; border-radius: 4px; padding: 0.7rem; color: #d7dadc; font-size: 0.9rem; outline: none; font-family: inherit; }
     .input-field:focus { border-color: #00ffcc; box-shadow: 0 0 8px rgba(0,255,200,0.15); }
     .textarea-field { background: #272729; border: 1px solid #343536; border-radius: 4px; padding: 0.7rem; color: #d7dadc; font-size: 0.9rem; outline: none; resize: vertical; min-height: 120px; font-family: inherit; }
-    .textarea-field:focus { border-color: #00ffcc; box-shadow: 0 0 8px rgba(0,255,200,0.15); }
+    .textarea-field:focus { border-color: #00ffcc; }
     .image-upload-area { border: 2px dashed #343536; border-radius: 4px; padding: 1.5rem; text-align: center; color: #818384; cursor: pointer; transition: 0.2s; }
     .image-upload-area:hover { border-color: #00ffcc; color: #00ffcc; }
     .image-upload-area.has-image { border-color: #00ffcc; padding: 0.5rem; }
     .image-upload-area img { max-width: 100%; max-height: 200px; border-radius: 4px; }
-    .submit-btn { background: #00ffcc; border: none; color: #000; font-weight: 700; padding: 0.7rem; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; width: 100%; }
-    .submit-btn:hover { background: #00ddaa; box-shadow: 0 0 15px rgba(0,255,200,0.3); }
+    .submit-btn { background: #00ffcc; border: none; color: #000; font-weight: 700; padding: 0.7rem; border-radius: 20px; cursor: pointer; font-size: 0.9rem; width: 100%; }
+    .submit-btn:hover { background: #00ddaa; }
     .submit-btn:disabled { background: #555; color: #999; cursor: not-allowed; box-shadow: none; }
     .post-full-view { padding: 1rem; }
     .post-full-body { color: #d7dadc; font-size: 1rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; margin: 1rem 0; }
     .post-full-image { max-width: 100%; border-radius: 4px; margin: 1rem 0; }
     .comments-section { border-top: 1px solid #343536; padding-top: 1rem; margin-top: 1rem; }
-    .comment-thread { display: flex; gap: 0.5rem; padding: 0.5rem 0; }
+    .comment { padding: 0.5rem 0; border-left: 2px solid #343536; padding-left: 0.8rem; margin-left: 0; }
+    .comment.reply { margin-left: 1.5rem; border-left-color: #00ffcc55; }
     .comment-body { flex: 1; }
     .comment-author { font-size: 0.75rem; font-weight: 600; color: #00ffcc; }
     .comment-text { color: #d7dadc; font-size: 0.9rem; }
+    .comment-actions { display: flex; gap: 0.8rem; margin-top: 0.2rem; }
+    .comment-action-btn { background: none; border: none; color: #818384; font-size: 0.7rem; cursor: pointer; }
+    .comment-action-btn:hover { color: #00ffcc; }
     .comment-input-row { display: flex; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid #343536; }
+    .delete-post-btn { background: #ff4466; color: #fff; border: none; padding: 0.2rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.7rem; margin-left: 0.5rem; }
+    .delete-post-btn:hover { background: #ff2244; }
+    .save-post-btn { background: none; border: none; color: #818384; cursor: pointer; font-size: 1.1rem; }
+    .save-post-btn.saved { color: #00ffcc; }
+    .report-btn { background: none; border: none; color: #ffaa00; cursor: pointer; font-size: 0.7rem; }
     .settings-group { display: flex; flex-direction: column; gap: 1rem; }
     .settings-group label { font-weight: 600; font-size: 0.9rem; color: #d7dadc; }
     .settings-group select { background: #272729; border: 1px solid #343536; color: #d7dadc; padding: 0.5rem; border-radius: 4px; }
@@ -92,7 +112,7 @@
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @media (max-width: 750px) {
       .app-container { flex-direction: column; margin: 0.5rem; }
-      .sidebar { width: 100%; position: static; flex-direction: row; flex-wrap: wrap; gap: 0.5rem; }
+      .sidebar { width: 100%; position: static; flex-direction: column; }
       .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
     }
   </style>
@@ -108,394 +128,329 @@
         <div class="sidebar-link" data-filter="new"><i class="fas fa-clock"></i> Новое</div>
         <div class="sidebar-link" data-filter="top"><i class="fas fa-trophy"></i> Топ</div>
       </nav>
-      <div class="sidebar-link" id="profileSidebarBtn"><i class="fas fa-user"></i> Профиль</div>
+      <div class="sidebar-link" id="savedPostsBtn"><i class="fas fa-bookmark"></i> Сохранённые</div>
       <div class="sidebar-link" id="settingsSidebarBtn"><i class="fas fa-cog"></i> Настройки</div>
+      <div class="user-section">
+        <div class="user-info" id="userInfo"><div class="user-avatar" id="sidebarAvatar">?</div><span class="user-name" id="sidebarUserName">Войти</span><span class="karma-badge" id="sidebarKarma"></span></div>
+        <button class="submit-btn" id="loginBtn" style="font-size:0.8rem;padding:0.4rem;">Войти через Google</button>
+        <button class="submit-btn hidden" id="logoutBtn" style="font-size:0.8rem;padding:0.4rem;background:#ff4466;">Выйти</button>
+      </div>
       <div class="sidebar-footer">будьте вежливы</div>
     </aside>
     <main class="main-content">
+      <div class="search-bar"><input type="text" class="search-input" id="searchInput" placeholder="Поиск по форуму..."><button class="submit-btn" id="searchBtn" style="width:auto;padding:0.5rem 1.2rem;">Поиск</button></div>
       <div class="create-post-btn" id="openCreatePostBtn"><div class="create-placeholder">Создать пост...</div></div>
       <div class="sort-bar">
         <button class="sort-btn active-sort" data-sort="best"><i class="fas fa-rocket"></i> Лучшие</button>
         <button class="sort-btn" data-sort="new"><i class="fas fa-clock"></i> Новые</button>
         <button class="sort-btn" data-sort="top"><i class="fas fa-arrow-up"></i> Топ</button>
       </div>
-      <div class="posts-list" id="postsList"><div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Загрузка постов...</div></div>
+      <div class="posts-list" id="postsList"><div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Загрузка...</div></div>
+      <div class="pagination" id="pagination"></div>
     </main>
   </div>
 
   <div class="modal-overlay hidden" id="createPostModal">
-    <div class="modal">
-      <div class="modal-header"><span class="modal-title">Создать пост</span><button class="close-btn" id="closeCreateModalBtn">&times;</button></div>
-      <div class="modal-body">
-        <input type="text" class="input-field" id="postTitleInput" placeholder="Заголовок">
-        <textarea class="textarea-field" id="postBodyInput" placeholder="Текст поста (необязательно)"></textarea>
-        <div class="image-upload-area" id="imageUploadArea"><i class="fas fa-image"></i> Нажмите, чтобы прикрепить фото<input type="file" accept="image/*" id="imageInput" hidden></div>
-        <button class="submit-btn" id="submitPostBtn">Опубликовать</button>
-      </div>
-    </div>
+    <div class="modal"><div class="modal-header"><span class="modal-title">Создать пост</span><button class="close-btn" id="closeCreateModalBtn">&times;</button></div>
+      <div class="modal-body"><input type="text" class="input-field" id="postTitleInput" placeholder="Заголовок"><textarea class="textarea-field" id="postBodyInput" placeholder="Текст поста (необязательно)"></textarea><div class="image-upload-area" id="imageUploadArea"><i class="fas fa-image"></i> Нажмите, чтобы прикрепить фото<input type="file" accept="image/*" id="imageInput" hidden></div><button class="submit-btn" id="submitPostBtn">Опубликовать</button></div></div>
   </div>
 
   <div class="modal-overlay hidden" id="postViewModal">
-    <div class="modal">
-      <div class="modal-header"><span class="modal-title" id="postViewTitle"></span><button class="close-btn" id="closePostViewBtn">&times;</button></div>
-      <div class="modal-body" id="postViewContent"></div>
-    </div>
-  </div>
-
-  <div class="modal-overlay hidden" id="profileModal">
-    <div class="modal">
-      <div class="modal-header"><span class="modal-title">Профиль</span><button class="close-btn" id="closeProfileBtn">&times;</button></div>
-      <div class="modal-body" style="text-align:center;">
-        <div id="profileNameDisplay" style="font-size:1.3rem;font-weight:700;"></div>
-        <div id="profileStats" style="color:#818384;margin:0.5rem 0;"></div>
-        <input type="text" class="input-field" id="profileNameInput" placeholder="Ваше имя" style="text-align:center;">
-        <button class="submit-btn" id="saveProfileBtn">Сохранить</button>
-      </div>
-    </div>
+    <div class="modal"><div class="modal-header"><span class="modal-title" id="postViewTitle"></span><button class="close-btn" id="closePostViewBtn">&times;</button></div><div class="modal-body" id="postViewContent"></div></div>
   </div>
 
   <div class="modal-overlay hidden" id="settingsModal">
-    <div class="modal">
-      <div class="modal-header"><span class="modal-title">Настройки</span><button class="close-btn" id="closeSettingsBtn">&times;</button></div>
-      <div class="modal-body">
-        <div class="settings-group">
-          <label>Язык постов</label><select id="languageFilter"><option value="all">Все языки</option><option value="ru">Русский</option><option value="en">English</option></select>
-          <label>NSFW контент</label><select id="nsfwFilter"><option value="hide">Скрывать 18+</option><option value="show">Показывать всё</option></select>
-        </div>
-        <button class="submit-btn" id="saveSettingsBtn">Сохранить настройки</button>
-      </div>
-    </div>
+    <div class="modal"><div class="modal-header"><span class="modal-title">Настройки</span><button class="close-btn" id="closeSettingsBtn">&times;</button></div>
+      <div class="modal-body"><div class="settings-group"><label>Язык</label><select id="languageFilter"><option value="all">Все</option><option value="ru">Русский</option><option value="en">English</option></select><label>NSFW</label><select id="nsfwFilter"><option value="hide">Скрывать</option><option value="show">Показывать</option></select><label>Тема</label><select id="themeSelect"><option value="dark">Тёмная</option></select></div><button class="submit-btn" id="saveSettingsBtn">Сохранить</button></div></div>
   </div>
 
   <script>
-    // ТВОЯ КОНФИГУРАЦИЯ FIREBASE
     const firebaseConfig = {
       apiKey: "AIzaSyCsXiFkm8RMGGIccU5toClPyTZZQi25i84",
       authDomain: "speedex308-31200.firebaseapp.com",
-      databaseURL: "https://speedex308-31200-default-rtdb.europe-west1.firebasedatabase.app",
       projectId: "speedex308-31200",
       storageBucket: "speedex308-31200.firebasestorage.app",
       messagingSenderId: "824640853758",
       appId: "1:824640853758:web:7d5736912bcfef3ba5b7af"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const auth = firebase.auth();
 
-    let posts = [];
-    let profile = { name: 'Пользователь' };
+    let posts = [], allPosts = [];
+    let user = null;
     let settings = { language: 'all', nsfw: 'hide' };
-    let currentPostId = null;
-    let currentSort = 'best';
-    let currentFilter = 'all';
-    let pendingImage = null;
-    let unsubscribe = null;
+    let currentPostId = null, currentSort = 'best', currentFilter = 'all';
+    let pendingImage = null, unsubscribe = null;
+    let currentPage = 1, pageSize = 10, savedPosts = [];
+    let replyingTo = null;
 
-    const NSFW_WORDS = ['мат','сука','блядь','хуй','пизда','ебать','fuck','shit','ass','расчлененка','убийство','кровь','жестокость','насилие','порно','секс','интим','голый','nude','violence','gore'];
+    const NSFW = ['мат','сука','блядь','хуй','пизда','ебать','fuck','shit','ass','расчлененка','убийство','кровь','жестокость','насилие','порно','секс','интим','голый','nude','violence','gore'];
 
-    function detectLanguage(text) {
-      const russianChars = /[а-яё]/i, englishChars = /[a-z]/i;
-      const hasRussian = russianChars.test(text), hasEnglish = englishChars.test(text);
-      if (hasRussian && !hasEnglish) return 'ru';
-      if (hasEnglish && !hasRussian) return 'en';
-      if (hasRussian && hasEnglish) return 'mixed';
-      return 'unknown';
+    function detectLang(t){const ru=/[а-яё]/i.test(t),en=/[a-z]/i.test(t);if(ru&&!en)return'ru';if(en&&!ru)return'en';if(ru&&en)return'mixed';return'unknown';}
+    function isNSFW(t){return NSFW.some(w=>t.toLowerCase().includes(w));}
+    function loadSettings(){try{const s=localStorage.getItem('sp308_settings');if(s)settings=JSON.parse(s);const sp=localStorage.getItem('sp308_saved');if(sp)savedPosts=JSON.parse(sp);}catch(e){}}
+    function saveSettings(){localStorage.setItem('sp308_settings',JSON.stringify(settings));}
+    function saveSavedPosts(){localStorage.setItem('sp308_saved',JSON.stringify(savedPosts));}
+
+    auth.onAuthStateChanged(u => {
+      user = u;
+      updateUserUI();
+      if (u) {
+        document.getElementById('loginBtn').classList.add('hidden');
+        document.getElementById('logoutBtn').classList.remove('hidden');
+      } else {
+        document.getElementById('loginBtn').classList.remove('hidden');
+        document.getElementById('logoutBtn').classList.add('hidden');
+      }
+    });
+
+    function updateUserUI() {
+      const avatar = document.getElementById('sidebarAvatar');
+      const name = document.getElementById('sidebarUserName');
+      const karma = document.getElementById('sidebarKarma');
+      if (user) {
+        avatar.textContent = (user.displayName || user.email || 'U').charAt(0).toUpperCase();
+        name.textContent = user.displayName || user.email.split('@')[0];
+        const userPosts = allPosts.filter(p => p.authorId === user.uid);
+        const totalKarma = userPosts.reduce((s,p) => s + (p.votes || 0), 0);
+        karma.textContent = '⭐' + totalKarma;
+      } else {
+        avatar.textContent = '?';
+        name.textContent = 'Войти';
+        karma.textContent = '';
+      }
     }
 
-    function containsNSFW(text) { return NSFW_WORDS.some(word => text.toLowerCase().includes(word)); }
-
-    function loadLocalData() {
-      const savedProfile = localStorage.getItem('speedex308_profile');
-      if (savedProfile) { try { profile = JSON.parse(savedProfile); } catch(e) {} }
-      const savedSettings = localStorage.getItem('speedex308_settings');
-      if (savedSettings) { try { settings = JSON.parse(savedSettings); } catch(e) {} }
-    }
-
-    function saveProfile() { localStorage.setItem('speedex308_profile', JSON.stringify(profile)); }
-    function saveSettings() { localStorage.setItem('speedex308_settings', JSON.stringify(settings)); }
+    document.getElementById('loginBtn').onclick = () => {
+      auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert('Ошибка входа: ' + e.message));
+    };
+    document.getElementById('logoutBtn').onclick = () => auth.signOut();
 
     function subscribeToPosts() {
       if (unsubscribe) unsubscribe();
-      document.getElementById('postsList').innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Загрузка постов...</div>';
-      unsubscribe = db.collection('posts').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
-        posts = [];
-        snapshot.forEach((doc) => { posts.push({ id: doc.id, ...doc.data() }); });
-        renderPosts();
-      }, (error) => {
-        console.error('Ошибка Firestore:', error);
-        document.getElementById('postsList').innerHTML = '<div class="empty-state">Ошибка загрузки. Проверь правила Firestore.</div>';
+      document.getElementById('postsList').innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Загрузка...</div>';
+      unsubscribe = db.collection('posts').orderBy('createdAt', 'desc').onSnapshot(snap => {
+        allPosts = [];
+        snap.forEach(doc => allPosts.push({ id: doc.id, ...doc.data() }));
+        updateUserUI();
+        applyFiltersAndRender();
+      }, err => {
+        document.getElementById('postsList').innerHTML = '<div class="empty-state">Ошибка загрузки</div>';
       });
     }
 
-    function getFilteredPosts() {
-      let filtered = [...posts];
-      if (settings.language !== 'all') {
-        filtered = filtered.filter(p => { const lang = detectLanguage(p.title + ' ' + p.body); return lang === settings.language || lang === 'mixed'; });
+    function applyFiltersAndRender() {
+      let filtered = [...allPosts];
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      if (q) filtered = filtered.filter(p => p.title.toLowerCase().includes(q) || (p.body||'').toLowerCase().includes(q));
+      if (currentFilter === 'saved') filtered = filtered.filter(p => savedPosts.includes(p.id));
+      else {
+        if (settings.language !== 'all') filtered = filtered.filter(p => {const l=detectLang(p.title+' '+p.body);return l===settings.language||l==='mixed';});
+        if (settings.nsfw === 'hide') filtered = filtered.filter(p => !p.nsfw);
+        const now = Date.now();
+        if (currentFilter === 'new') filtered.sort((a,b) => b.createdAt - a.createdAt);
+        else if (currentFilter === 'popular') filtered.sort((a,b) => (b.votes+(b.comments?b.comments.length:0)*2) - (a.votes+(a.comments?a.comments.length:0)*2));
+        else if (currentFilter === 'top') filtered.sort((a,b) => b.votes - a.votes);
+        if (currentSort === 'new') filtered.sort((a,b) => b.createdAt - a.createdAt);
+        else if (currentSort === 'top') filtered.sort((a,b) => b.votes - a.votes);
       }
-      if (settings.nsfw === 'hide') { filtered = filtered.filter(p => !p.nsfw); }
-      const now = Date.now();
-      if (currentFilter === 'new') filtered.sort((a,b) => b.createdAt - a.createdAt);
-      else if (currentFilter === 'popular') filtered.sort((a,b) => (b.votes + (b.comments ? b.comments.length : 0)*2) - (a.votes + (a.comments ? a.comments.length : 0)*2));
-      else if (currentFilter === 'top') filtered.sort((a,b) => b.votes - a.votes);
-      if (currentSort === 'new') filtered.sort((a,b) => b.createdAt - a.createdAt);
-      else if (currentSort === 'top') filtered.sort((a,b) => b.votes - a.votes);
-      else if (currentSort === 'best') filtered.sort((a,b) => (b.votes / Math.max(1, (now - b.createdAt)/3600000)) - (a.votes / Math.max(1, (now - a.createdAt)/3600000)));
-      return filtered;
+      posts = filtered;
+      renderPage();
     }
 
-    function renderPosts() {
+    function renderPage() {
+      const totalPages = Math.ceil(posts.length / pageSize) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+      const start = (currentPage - 1) * pageSize;
+      const pagePosts = posts.slice(start, start + pageSize);
       const list = document.getElementById('postsList');
-      if (!list) return;
-      const filtered = getFilteredPosts();
-      if (filtered.length === 0) { list.innerHTML = '<div class="empty-state">Пока нет постов. Создайте первый!</div>'; return; }
-      list.innerHTML = '';
-      filtered.forEach(p => {
-        const userVote = p.userVotes && p.userVotes[profile.name] ? p.userVotes[profile.name] : 0;
-        const card = document.createElement('div');
-        card.className = 'post-card';
-        card.innerHTML = `
-          <div class="vote-column">
-            <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" data-id="${p.id}" data-vote="up">▲</button>
-            <span class="vote-count">${p.votes || 0}</span>
-            <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" data-id="${p.id}" data-vote="down">▼</button>
-          </div>
-          <div class="post-content" data-post-id="${p.id}">
-            <div class="post-header">
-              <span class="post-author">u/${escapeHtml(p.author)}</span><span>•</span><span>${timeAgo(p.createdAt)}</span>${p.nsfw ? '<span class="nsfw-badge">18+</span>' : ''}
-            </div>
-            <span class="post-title-link">${escapeHtml(p.title)}</span>
-            ${p.body ? `<div class="post-body-preview">${escapeHtml(p.body.substring(0, 200))}${p.body.length > 200 ? '...' : ''}</div>` : ''}
-            ${p.image ? `<img src="${p.image}" class="post-image-preview" alt="post image">` : ''}
+      if (!pagePosts.length) { list.innerHTML = '<div class="empty-state">Ничего не найдено</div>'; }
+      else {
+        list.innerHTML = '';
+        pagePosts.forEach(p => {
+          const uv = p.userVotes?.[user?.uid||''] || 0;
+          const card = document.createElement('div');
+          card.className = 'post-card';
+          card.innerHTML = `<div class="vote-column"><button class="vote-btn ${uv===1?'upvoted':''}" data-id="${p.id}" data-v="up">▲</button><span class="vote-count">${p.votes||0}</span><button class="vote-btn ${uv===-1?'downvoted':''}" data-id="${p.id}" data-v="down">▼</button></div>
+          <div class="post-content" data-pid="${p.id}">
+            <div class="post-header"><span class="post-author">u/${esc(p.authorName||'аноним')}</span> • ${ago(p.createdAt)}${p.nsfw?'<span class="nsfw-badge">18+</span>':''}</div>
+            <span class="post-title-link">${esc(p.title)}</span>
+            ${p.body?`<div class="post-body-preview">${esc(p.body.substring(0,200))}</div>`:''}
+            ${p.image?`<img src="${p.image}" class="post-image-preview">`:''}
             <div class="post-actions">
-              <button class="post-action-btn comment-action" data-id="${p.id}"><i class="fas fa-comment-alt"></i> ${p.comments ? p.comments.length : 0} комментариев</button>
-            </div>
-          </div>`;
-        list.appendChild(card);
-      });
-
-      document.querySelectorAll('.vote-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const id = btn.dataset.id;
-          const direction = btn.dataset.vote === 'up' ? 1 : -1;
-          votePost(id, direction);
+              <button class="post-action-btn comm-btn" data-id="${p.id}"><i class="fas fa-comment-alt"></i> ${p.comments?p.comments.length:0}</button>
+              <button class="save-post-btn ${savedPosts.includes(p.id)?'saved':''}" data-id="${p.id}"><i class="fas fa-bookmark"></i></button>
+              ${p.reports>2?'<span style="color:#ffaa00;font-size:0.7rem;">⚠ Жалобы</span>':''}
+            </div></div>`;
+          list.appendChild(card);
         });
-      });
-
-      document.querySelectorAll('.post-content').forEach(el => {
-        el.addEventListener('click', (e) => {
-          if (e.target.closest('.vote-btn') || e.target.closest('.post-author')) return;
-          const id = el.dataset.postId;
-          if (id) openPostView(id);
-        });
-      });
-
-      document.querySelectorAll('.comment-action').forEach(btn => {
-        btn.addEventListener('click', (e) => { e.stopPropagation(); openPostView(btn.dataset.id); });
-      });
-    }
-
-    async function votePost(postId, direction) {
-      const postRef = db.collection('posts').doc(postId);
-      const post = posts.find(p => p.id === postId);
-      if (!post) return;
-      const userVotes = post.userVotes || {};
-      const currentVote = userVotes[profile.name] || 0;
-      let voteChange = 0;
-      if (currentVote === direction) { delete userVotes[profile.name]; voteChange = -direction; }
-      else { if (currentVote !== 0) voteChange = -currentVote; userVotes[profile.name] = direction; voteChange += direction; }
-      try { await postRef.update({ votes: firebase.firestore.FieldValue.increment(voteChange), userVotes: userVotes }); }
-      catch (error) { console.error('Ошибка голосования:', error); }
-    }
-
-    function openPostView(postId) {
-      currentPostId = postId;
-      const post = posts.find(p => p.id === postId);
-      if (!post) return;
-      document.getElementById('postViewTitle').textContent = post.title;
-      document.getElementById('postViewModal').classList.remove('hidden');
-      renderPostViewContent();
-    }
-
-    function renderPostViewContent() {
-      const post = posts.find(p => p.id === currentPostId);
-      if (!post) return;
-      const userVote = post.userVotes && post.userVotes[profile.name] ? post.userVotes[profile.name] : 0;
-      const container = document.getElementById('postViewContent');
-      container.innerHTML = `
-        <div class="post-full-view">
-          <div style="color:#818384;font-size:0.8rem;">u/${escapeHtml(post.author)} • ${timeAgo(post.createdAt)}${post.nsfw ? '<span class="nsfw-badge">18+</span>' : ''}</div>
-          <div class="post-full-body">${escapeHtml(post.body || '')}</div>
-          ${post.image ? `<img src="${post.image}" class="post-full-image" alt="post image">` : ''}
-          <div style="display:flex;gap:0.5rem;margin:1rem 0;">
-            <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" id="postViewUpvote">▲ ${post.votes || 0}</button>
-            <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" id="postViewDownvote">▼</button>
-          </div>
-          <div class="comments-section">
-            <strong>Комментарии (${post.comments ? post.comments.length : 0})</strong>
-            ${!post.comments || post.comments.length === 0 ? '<div style="color:#818384;padding:0.5rem 0;">Пока нет комментариев</div>' : ''}
-            ${post.comments ? post.comments.map((c) => `
-              <div class="comment-thread">
-                <div class="comment-body"><span class="comment-author">${escapeHtml(c.author)}</span><div class="comment-text">${escapeHtml(c.text)}</div><small style="color:#818384;">${timeAgo(c.createdAt)}</small></div>
-              </div>`).join('') : ''}
-          </div>
-          <div class="comment-input-row">
-            <input type="text" class="input-field" id="postViewCommentInput" placeholder="Ваш комментарий...">
-            <button class="submit-btn" id="postViewAddCommentBtn" style="width:auto;padding:0.5rem 1.5rem;">Ответить</button>
-          </div>
-        </div>`;
-
-      document.getElementById('postViewUpvote').addEventListener('click', () => votePost(currentPostId, 1));
-      document.getElementById('postViewDownvote').addEventListener('click', () => votePost(currentPostId, -1));
-      document.getElementById('postViewAddCommentBtn').addEventListener('click', () => {
-        const inp = document.getElementById('postViewCommentInput');
-        addComment(inp.value);
-        inp.value = '';
-      });
-      document.getElementById('postViewCommentInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') document.getElementById('postViewAddCommentBtn').click();
-      });
-    }
-
-    // ✅ ИСПРАВЛЕННАЯ ФУНКЦИЯ КОММЕНТАРИЕВ
-    async function addComment(text) {
-      if (!text.trim() || !currentPostId) return;
-      const post = posts.find(p => p.id === currentPostId);
-      if (!post) return;
-      const newComments = [...(post.comments || []), {
-        author: profile.name,
-        text: text.trim(),
-        createdAt: Date.now()
-      }];
-      try {
-        await db.collection('posts').doc(currentPostId).update({ comments: newComments });
-      } catch (error) {
-        console.error('Ошибка добавления комментария:', error);
+        document.querySelectorAll('.vote-btn').forEach(b => b.onclick = e => { e.stopPropagation(); votePost(b.dataset.id, b.dataset.v==='up'?1:-1); });
+        document.querySelectorAll('.post-content').forEach(el => el.onclick = e => { if(!e.target.closest('.vote-btn')&&!e.target.closest('.post-author')&&!e.target.closest('.save-post-btn')) openPostView(el.dataset.pid); });
+        document.querySelectorAll('.comm-btn').forEach(b => b.onclick = e => { e.stopPropagation(); openPostView(b.dataset.id); });
+        document.querySelectorAll('.save-post-btn').forEach(b => b.onclick = e => { e.stopPropagation(); toggleSave(b.dataset.id); });
       }
+      renderPagination(totalPages);
     }
 
-    // ✅ ИСПРАВЛЕННАЯ ФУНКЦИЯ СОЗДАНИЯ ПОСТА
+    function toggleSave(postId) {
+      if (!user) return alert('Войдите чтобы сохранять');
+      if (savedPosts.includes(postId)) savedPosts = savedPosts.filter(id => id !== postId);
+      else savedPosts.push(postId);
+      saveSavedPosts();
+      applyFiltersAndRender();
+    }
+
+    function renderPagination(total) {
+      const pg = document.getElementById('pagination');
+      if (total <= 1) { pg.innerHTML = ''; return; }
+      let html = `<button class="page-btn" ${currentPage===1?'disabled':''} data-page="${currentPage-1}">←</button>`;
+      for (let i=1; i<=total; i++) {
+        html += `<button class="page-btn ${i===currentPage?'active':''}" data-page="${i}">${i}</button>`;
+      }
+      html += `<button class="page-btn" ${currentPage===total?'disabled':''} data-page="${currentPage+1}">→</button>`;
+      pg.innerHTML = html;
+      pg.querySelectorAll('.page-btn').forEach(b => b.onclick = () => { if(!b.disabled) { currentPage = parseInt(b.dataset.page); renderPage(); window.scrollTo(0,0); } });
+    }
+
+    async function votePost(pid, dir) {
+      if (!user) return alert('Войдите чтобы голосовать');
+      const p = allPosts.find(x=>x.id===pid); if(!p) return;
+      const uv = {...(p.userVotes||{})}; const cur = uv[user.uid]||0;
+      let ch = 0;
+      if(cur===dir){delete uv[user.uid];ch=-dir;}else{if(cur)ch=-cur;uv[user.uid]=dir;ch+=dir;}
+      try{await db.collection('posts').doc(pid).update({votes:(p.votes||0)+ch,userVotes:uv});}catch(e){console.error(e);}
+    }
+
+    function openPostView(pid) {
+      currentPostId = pid; replyingTo = null;
+      const p = allPosts.find(x=>x.id===pid); if(!p) return;
+      document.getElementById('postViewTitle').textContent = p.title;
+      document.getElementById('postViewModal').classList.remove('hidden');
+      renderPostView();
+    }
+
+    function renderPostView() {
+      const p = allPosts.find(x=>x.id===currentPostId); if(!p) return;
+      const uv = p.userVotes?.[user?.uid||''] || 0;
+      const isOwner = user && p.authorId === user.uid;
+      const container = document.getElementById('postViewContent');
+      container.innerHTML = `<div class="post-full-view">
+        <div style="color:#818384;font-size:0.8rem;">u/${esc(p.authorName||'аноним')} • ${ago(p.createdAt)}${p.nsfw?'<span class="nsfw-badge">18+</span>':''}
+        ${isOwner?`<button class="delete-post-btn" id="deletePostBtn">Удалить</button>`:''}
+        ${user&&!isOwner?`<button class="report-btn" id="reportPostBtn">🚩 Пожаловаться</button>`:''}</div>
+        <div class="post-full-body">${esc(p.body||'')}</div>
+        ${p.image?`<img src="${p.image}" class="post-full-image">`:''}
+        <div style="display:flex;gap:0.5rem;margin:1rem 0;"><button class="vote-btn ${uv===1?'upvoted':''}" id="vu">▲ ${p.votes||0}</button><button class="vote-btn ${uv===-1?'downvoted':''}" id="vd">▼</button></div>
+        <div class="comments-section"><strong>Комментарии (${p.comments?p.comments.length:0})</strong>
+        ${renderComments(p.comments||[],0)}
+        </div>
+        <div class="comment-input-row"><input type="text" class="input-field" id="ci" placeholder="${replyingTo?'Ответ пользователю...':'Комментарий...'}"><button class="submit-btn" id="acb" style="width:auto;padding:0.5rem 1.5rem;">Ответить</button></div></div>`;
+
+      document.getElementById('vu').onclick = ()=>votePost(currentPostId,1);
+      document.getElementById('vd').onclick = ()=>votePost(currentPostId,-1);
+      document.getElementById('acb').onclick = ()=>{const i=document.getElementById('ci');addComment(i.value);i.value='';};
+      document.getElementById('ci').onkeypress = e=>{if(e.key==='Enter')document.getElementById('acb').click();};
+      const del = document.getElementById('deletePostBtn');
+      if(del) del.onclick = async ()=>{if(confirm('Удалить?')){await db.collection('posts').doc(currentPostId).delete();document.getElementById('postViewModal').classList.add('hidden');currentPostId=null;}};
+      const rep = document.getElementById('reportPostBtn');
+      if(rep) rep.onclick = async ()=>{await db.collection('posts').doc(currentPostId).update({reports:firebase.firestore.FieldValue.increment(1)});alert('Жалоба отправлена');};
+    }
+
+    function renderComments(comments, depth) {
+      if (!comments || !comments.length) return '<div style="color:#818384;padding:0.5rem 0;">Пока нет комментариев</div>';
+      return comments.map((c,i) => `
+        <div class="comment ${depth>0?'reply':''}" style="margin-left:${depth*20}px;">
+          <span class="comment-author">${esc(c.authorName||'аноним')}</span>
+          <div class="comment-text">${esc(c.text)}</div>
+          <small style="color:#818384;">${ago(c.createdAt)}</small>
+          <div class="comment-actions">
+            <button class="comment-action-btn reply-btn" data-comment-id="${i}">💬 Ответить</button>
+          </div>
+          ${c.replies ? renderComments(c.replies, depth+1) : ''}
+        </div>`).join('');
+    }
+
+    async function addComment(text) {
+      if (!text.trim() || !currentPostId || !user) return alert('Войдите чтобы комментировать');
+      const p = allPosts.find(x=>x.id===currentPostId); if(!p) return;
+      const newComment = { authorId: user.uid, authorName: user.displayName||user.email.split('@')[0], text: text.trim(), createdAt: Date.now(), replies: [] };
+      const comments = [...(p.comments||[]), newComment];
+      try { await db.collection('posts').doc(currentPostId).update({ comments }); replyingTo = null; }
+      catch(e) { console.error(e); }
+    }
+
     async function createPost(title, body, image) {
+      if (!user) return alert('Войдите чтобы создавать посты');
       if (!title.trim()) return;
-      const btn = document.getElementById('submitPostBtn');
-      btn.disabled = true;
-      btn.textContent = 'Публикация...';
-      const fullText = title + ' ' + body;
-      const isNsfw = containsNSFW(fullText);
+      const btn = document.getElementById('submitPostBtn'); btn.disabled = true; btn.textContent = 'Публикация...';
       try {
         await db.collection('posts').add({
-          title: title.trim(), body: body.trim(), image: image || null,
-          author: profile.name, votes: 1, userVotes: { [profile.name]: 1 },
-          nsfw: isNsfw, comments: [], createdAt: Date.now()
+          title: title.trim(), body: body.trim(), image: image||null,
+          authorId: user.uid, authorName: user.displayName||user.email.split('@')[0],
+          votes: 1, userVotes: { [user.uid]: 1 }, nsfw: isNSFW(title+' '+body),
+          comments: [], createdAt: Date.now(), reports: 0
         });
         closeCreateModal();
-      } catch (error) {
-        console.error('Ошибка создания поста:', error);
-      }
-      btn.disabled = false;
-      btn.textContent = 'Опубликовать';
+      } catch(e) { console.error(e); }
+      btn.disabled = false; btn.textContent = 'Опубликовать';
     }
 
-    function timeAgo(ts) {
-      const diff = Date.now() - ts;
-      const mins = Math.floor(diff/60000);
-      if (mins < 1) return 'сейчас';
-      if (mins < 60) return `${mins} мин.`;
-      const hrs = Math.floor(mins/60);
-      if (hrs < 24) return `${hrs} ч.`;
-      return `${Math.floor(hrs/24)} дн.`;
-    }
-
-    function escapeHtml(t) { if (!t) return ''; return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-    function closeCreateModal() {
+    function ago(ts){const m=Math.floor((Date.now()-ts)/60000);if(m<1)return'сейчас';if(m<60)return m+' мин.';const h=Math.floor(m/60);if(h<24)return h+' ч.';return Math.floor(h/24)+' дн.';}
+    function esc(t){return t?t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):'';}
+    function closeCreateModal(){
       document.getElementById('createPostModal').classList.add('hidden');
-      document.getElementById('postTitleInput').value = '';
-      document.getElementById('postBodyInput').value = '';
-      pendingImage = null;
-      resetImageUpload();
+      document.getElementById('postTitleInput').value='';
+      document.getElementById('postBodyInput').value='';
+      pendingImage=null;
+      const a=document.getElementById('imageUploadArea');a.classList.remove('has-image');a.innerHTML='<i class="fas fa-image"></i> Нажмите, чтобы прикрепить фото';
+      document.getElementById('imageInput').value='';
     }
 
-    function resetImageUpload() {
-      const area = document.getElementById('imageUploadArea');
-      area.classList.remove('has-image');
-      area.innerHTML = '<i class="fas fa-image"></i> Нажмите, чтобы прикрепить фото';
-      document.getElementById('imageInput').value = '';
-    }
-
-    // ИНИЦИАЛИЗАЦИЯ
-    loadLocalData();
+    loadSettings();
     subscribeToPosts();
 
-    document.getElementById('profileSidebarBtn').addEventListener('click', () => {
-      document.getElementById('profileNameDisplay').textContent = profile.name;
-      document.getElementById('profileStats').textContent = `Постов: ${posts.filter(p => p.author === profile.name).length}`;
-      document.getElementById('profileNameInput').value = profile.name;
-      document.getElementById('profileModal').classList.remove('hidden');
-    });
-    document.getElementById('closeProfileBtn').addEventListener('click', () => document.getElementById('profileModal').classList.add('hidden'));
-    document.getElementById('saveProfileBtn').addEventListener('click', () => {
-      const newName = document.getElementById('profileNameInput').value.trim();
-      if (newName) { profile.name = newName; saveProfile(); document.getElementById('profileNameDisplay').textContent = newName; renderPosts(); }
-    });
-
-    document.getElementById('settingsSidebarBtn').addEventListener('click', () => {
+    document.getElementById('savedPostsBtn').onclick = () => {
+      document.querySelectorAll('.sidebar-link[data-filter]').forEach(l=>l.classList.remove('active'));
+      document.getElementById('savedPostsBtn').classList.add('active');
+      currentFilter = 'saved'; currentPage = 1; applyFiltersAndRender();
+    };
+    document.getElementById('settingsSidebarBtn').onclick = () => {
       document.getElementById('languageFilter').value = settings.language;
       document.getElementById('nsfwFilter').value = settings.nsfw;
       document.getElementById('settingsModal').classList.remove('hidden');
-    });
-    document.getElementById('closeSettingsBtn').addEventListener('click', () => document.getElementById('settingsModal').classList.add('hidden'));
-    document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+    };
+    document.getElementById('closeSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.add('hidden');
+    document.getElementById('saveSettingsBtn').onclick = () => {
       settings.language = document.getElementById('languageFilter').value;
       settings.nsfw = document.getElementById('nsfwFilter').value;
-      saveSettings(); document.getElementById('settingsModal').classList.add('hidden'); renderPosts();
+      saveSettings(); document.getElementById('settingsModal').classList.add('hidden'); applyFiltersAndRender();
+    };
+    document.getElementById('searchBtn').onclick = () => { currentPage = 1; applyFiltersAndRender(); };
+    document.getElementById('searchInput').onkeypress = e => { if(e.key==='Enter') { currentPage=1; applyFiltersAndRender(); } };
+    document.getElementById('openCreatePostBtn').onclick = () => document.getElementById('createPostModal').classList.remove('hidden');
+    document.getElementById('closeCreateModalBtn').onclick = closeCreateModal;
+    document.getElementById('imageUploadArea').onclick = () => document.getElementById('imageInput').click();
+    document.getElementById('imageInput').onchange = e => {
+      const f=e.target.files[0]; if(!f)return;
+      const r=new FileReader(); r.onload=ev=>{pendingImage=ev.target.result;const a=document.getElementById('imageUploadArea');a.classList.add('has-image');a.innerHTML=`<img src="${pendingImage}">`;};r.readAsDataURL(f);
+    };
+    document.getElementById('submitPostBtn').onclick = () => createPost(document.getElementById('postTitleInput').value, document.getElementById('postBodyInput').value, pendingImage);
+    document.getElementById('closePostViewBtn').onclick = () => { document.getElementById('postViewModal').classList.add('hidden'); currentPostId = null; };
+    document.querySelectorAll('.sort-btn').forEach(b => b.onclick = () => {
+      document.querySelectorAll('.sort-btn').forEach(x=>x.classList.remove('active-sort'));
+      b.classList.add('active-sort'); currentSort = b.dataset.sort; applyFiltersAndRender();
     });
+    document.querySelectorAll('.sidebar-link[data-filter]').forEach(l => l.onclick = () => {
+      document.querySelectorAll('.sidebar-link').forEach(x=>x.classList.remove('active'));
+      l.classList.add('active'); currentFilter = l.dataset.filter; currentPage = 1; applyFiltersAndRender();
+    });
+    document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => {
+      if(e.target===o){o.classList.add('hidden');if(o.id==='postViewModal')currentPostId=null;}
+    }));
 
-    document.getElementById('openCreatePostBtn').addEventListener('click', () => document.getElementById('createPostModal').classList.remove('hidden'));
-    document.getElementById('closeCreateModalBtn').addEventListener('click', closeCreateModal);
-    document.getElementById('imageUploadArea').addEventListener('click', () => document.getElementById('imageInput').click());
-    document.getElementById('imageInput').addEventListener('change', (e) => {
-      const file = e.target.files[0]; if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(ev) {
-        pendingImage = ev.target.result;
-        const area = document.getElementById('imageUploadArea');
-        area.classList.add('has-image'); area.innerHTML = `<img src="${pendingImage}" alt="preview">`;
-      };
-      reader.readAsDataURL(file);
-    });
-    document.getElementById('submitPostBtn').addEventListener('click', () => {
-      createPost(document.getElementById('postTitleInput').value, document.getElementById('postBodyInput').value, pendingImage);
-    });
-    document.getElementById('closePostViewBtn').addEventListener('click', () => { document.getElementById('postViewModal').classList.add('hidden'); currentPostId = null; });
-
-    document.querySelectorAll('.sort-btn').forEach(b => {
-      b.addEventListener('click', () => {
-        document.querySelectorAll('.sort-btn').forEach(x => x.classList.remove('active-sort'));
-        b.classList.add('active-sort'); currentSort = b.dataset.sort; renderPosts();
-      });
-    });
-    document.querySelectorAll('.sidebar-link[data-filter]').forEach(link => {
-      link.addEventListener('click', () => {
-        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-        link.classList.add('active'); currentFilter = link.dataset.filter; renderPosts();
-      });
-    });
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) { overlay.classList.add('hidden'); if (overlay.id === 'postViewModal') currentPostId = null; }
-      });
-    });
-
-    const bg = document.getElementById('speedBg');
-    function createBgLine() {
-      const line = document.createElement('div'); line.className = 'speed-line-bg';
-      line.style.top = Math.random()*100 + '%'; line.style.width = (Math.random()*180+80)+'px';
-      line.style.animationDuration = (Math.random()*4+3)+'s'; bg.appendChild(line);
-      setTimeout(() => line.remove(), 6000);
-    }
-    setInterval(createBgLine, 500);
-    for (let i=0;i<8;i++) setTimeout(createBgLine, i*250);
+    const bg=document.getElementById('speedBg');
+    if(bg) setInterval(()=>{const l=document.createElement('div');l.className='speed-line-bg';l.style.top=Math.random()*100+'%';l.style.width=(Math.random()*180+80)+'px';l.style.animationDuration=(Math.random()*4+3)+'s';bg.appendChild(l);setTimeout(()=>l.remove(),6000);},500);
   </script>
 </body>
 </html>
