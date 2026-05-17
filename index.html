@@ -7,10 +7,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   
   <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js">
-  </script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js">
-  </script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   
   <style>
     * {
@@ -652,7 +650,7 @@
     </main>
   </div>
 
-  <!-- Модалки (без изменений) -->
+  <!-- Модалка создания поста -->
   <div class="modal-overlay hidden" id="createPostModal">
     <div class="modal">
       <div class="modal-header">
@@ -671,6 +669,7 @@
     </div>
   </div>
 
+  <!-- Модалка просмотра поста -->
   <div class="modal-overlay hidden" id="postViewModal">
     <div class="modal">
       <div class="modal-header">
@@ -681,6 +680,7 @@
     </div>
   </div>
 
+  <!-- Модалка профиля -->
   <div class="modal-overlay hidden" id="profileModal">
     <div class="modal">
       <div class="modal-header">
@@ -696,6 +696,7 @@
     </div>
   </div>
 
+  <!-- Модалка настроек -->
   <div class="modal-overlay hidden" id="settingsModal">
     <div class="modal">
       <div class="modal-header">
@@ -722,14 +723,15 @@
   </div>
 
   <script>
-    // ⚡ КОНФИГУРАЦИЯ FIREBASE — ЗАМЕНИ НА СВОИ ДАННЫЕ ⚡
+    // ⚡ ТВОЯ КОНФИГУРАЦИЯ FIREBASE ⚡
     const firebaseConfig = {
-      apiKey: "AIzaSy...",
-      authDomain: "speedex308.firebaseapp.com",
-      projectId: "speedex308",
-      storageBucket: "speedex308.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abc123"
+      apiKey: "AIzaSyCsXiFkm8RMGGIccU5toClPyTZZQi25i84",
+      authDomain: "speedex308-31200.firebaseapp.com",
+      databaseURL: "https://speedex308-31200-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "speedex308-31200",
+      storageBucket: "speedex308-31200.firebasestorage.app",
+      messagingSenderId: "824640853758",
+      appId: "1:824640853758:web:7d5736912bcfef3ba5b7af"
     };
 
     // Инициализация Firebase
@@ -768,7 +770,6 @@
       return NSFW_WORDS.some(word => lowerText.includes(word));
     }
 
-    // Загрузка профиля и настроек из localStorage
     function loadLocalData() {
       const savedProfile = localStorage.getItem('speedex308_profile');
       if (savedProfile) {
@@ -783,7 +784,7 @@
     function saveProfile() { localStorage.setItem('speedex308_profile', JSON.stringify(profile)); }
     function saveSettings() { localStorage.setItem('speedex308_settings', JSON.stringify(settings)); }
 
-    // Подписка на обновления Firestore
+    // Подписка на Firestore — слушает изменения в реальном времени
     function subscribeToPosts() {
       if (unsubscribe) unsubscribe();
       
@@ -796,8 +797,8 @@
         });
         renderPosts();
       }, (error) => {
-        console.error('Ошибка загрузки:', error);
-        document.getElementById('postsList').innerHTML = '<div class="empty-state">Ошибка загрузки. Проверь конфигурацию Firebase.</div>';
+        console.error('Ошибка Firestore:', error);
+        document.getElementById('postsList').innerHTML = '<div class="empty-state">Ошибка загрузки. Проверь правила Firestore.</div>';
       });
     }
 
@@ -817,7 +818,7 @@
 
       const now = Date.now();
       if (currentFilter === 'new') filtered.sort((a,b) => b.createdAt - a.createdAt);
-      else if (currentFilter === 'popular') filtered.sort((a,b) => (b.votes + b.comments.length*2) - (a.votes + a.comments.length*2));
+      else if (currentFilter === 'popular') filtered.sort((a,b) => (b.votes + (b.comments ? b.comments.length : 0)*2) - (a.votes + (a.comments ? a.comments.length : 0)*2));
       else if (currentFilter === 'top') filtered.sort((a,b) => b.votes - a.votes);
 
       if (currentSort === 'new') filtered.sort((a,b) => b.createdAt - a.createdAt);
@@ -837,13 +838,14 @@
       }
       list.innerHTML = '';
       filtered.forEach(p => {
+        const userVote = p.userVotes && p.userVotes[profile.name] ? p.userVotes[profile.name] : 0;
         const card = document.createElement('div');
         card.className = 'post-card';
         card.innerHTML = `
           <div class="vote-column">
-            <button class="vote-btn ${p.userVotes && p.userVotes[profile.name] === 1 ? 'upvoted' : ''}" data-id="${p.id}" data-vote="up">▲</button>
+            <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" data-id="${p.id}" data-vote="up">▲</button>
             <span class="vote-count">${p.votes || 0}</span>
-            <button class="vote-btn ${p.userVotes && p.userVotes[profile.name] === -1 ? 'downvoted' : ''}" data-id="${p.id}" data-vote="down">▼</button>
+            <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" data-id="${p.id}" data-vote="down">▼</button>
           </div>
           <div class="post-content" data-post-id="${p.id}">
             <div class="post-header">
@@ -909,10 +911,14 @@
         voteChange += direction;
       }
 
-      await postRef.update({
-        votes: firebase.firestore.FieldValue.increment(voteChange),
-        userVotes: userVotes
-      });
+      try {
+        await postRef.update({
+          votes: firebase.firestore.FieldValue.increment(voteChange),
+          userVotes: userVotes
+        });
+      } catch (error) {
+        console.error('Ошибка голосования:', error);
+      }
     }
 
     function openPostView(postId) {
@@ -927,6 +933,7 @@
     function renderPostViewContent() {
       const post = posts.find(p => p.id === currentPostId);
       if (!post) return;
+      const userVote = post.userVotes && post.userVotes[profile.name] ? post.userVotes[profile.name] : 0;
       const container = document.getElementById('postViewContent');
       container.innerHTML = `
         <div class="post-full-view">
@@ -937,13 +944,13 @@
           <div class="post-full-body">${escapeHtml(post.body || '')}</div>
           ${post.image ? `<img src="${post.image}" class="post-full-image" alt="post image">` : ''}
           <div style="display:flex;gap:0.5rem;margin:1rem 0;">
-            <button class="vote-btn ${post.userVotes && post.userVotes[profile.name] === 1 ? 'upvoted' : ''}" id="postViewUpvote">▲ ${post.votes || 0}</button>
-            <button class="vote-btn ${post.userVotes && post.userVotes[profile.name] === -1 ? 'downvoted' : ''}" id="postViewDownvote">▼</button>
+            <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" id="postViewUpvote">▲ ${post.votes || 0}</button>
+            <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" id="postViewDownvote">▼</button>
           </div>
           <div class="comments-section">
             <strong>Комментарии (${post.comments ? post.comments.length : 0})</strong>
             ${!post.comments || post.comments.length === 0 ? '<div style="color:#818384;padding:0.5rem 0;">Пока нет комментариев</div>' : ''}
-            ${post.comments ? post.comments.map((c, i) => `
+            ${post.comments ? post.comments.map((c) => `
               <div class="comment-thread">
                 <div class="comment-body">
                   <span class="comment-author">${escapeHtml(c.author)}</span>
@@ -980,27 +987,35 @@
         text: text.trim(),
         createdAt: Date.now()
       };
-      await postRef.update({
-        comments: firebase.firestore.FieldValue.arrayUnion(comment)
-      });
+      try {
+        await postRef.update({
+          comments: firebase.firestore.FieldValue.arrayUnion(comment)
+        });
+      } catch (error) {
+        console.error('Ошибка добавления комментария:', error);
+      }
     }
 
     async function createPost(title, body, image) {
       if (!title.trim()) return;
       const fullText = title + ' ' + body;
       const isNsfw = containsNSFW(fullText);
-      await db.collection('posts').add({
-        title: title.trim(),
-        body: body.trim(),
-        image: image || null,
-        author: profile.name,
-        votes: 1,
-        userVotes: { [profile.name]: 1 },
-        nsfw: isNsfw,
-        comments: [],
-        createdAt: Date.now()
-      });
-      closeCreateModal();
+      try {
+        await db.collection('posts').add({
+          title: title.trim(),
+          body: body.trim(),
+          image: image || null,
+          author: profile.name,
+          votes: 1,
+          userVotes: { [profile.name]: 1 },
+          nsfw: isNsfw,
+          comments: [],
+          createdAt: Date.now()
+        });
+        closeCreateModal();
+      } catch (error) {
+        console.error('Ошибка создания поста:', error);
+      }
     }
 
     function timeAgo(ts) {
@@ -1013,7 +1028,10 @@
       return `${Math.floor(hrs/24)} дн.`;
     }
 
-    function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function escapeHtml(t) { 
+      if (!t) return '';
+      return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); 
+    }
 
     function closeCreateModal() {
       document.getElementById('createPostModal').classList.add('hidden');
@@ -1030,11 +1048,11 @@
       document.getElementById('imageInput').value = '';
     }
 
-    // Инициализация
+    // ==================== ИНИЦИАЛИЗАЦИЯ ====================
     loadLocalData();
     subscribeToPosts();
 
-    // Обработчики событий (все как раньше)
+    // Профиль
     document.getElementById('profileSidebarBtn').addEventListener('click', () => {
       document.getElementById('profileNameDisplay').textContent = profile.name;
       const userPosts = posts.filter(p => p.author === profile.name);
@@ -1053,9 +1071,11 @@
         profile.name = newName;
         saveProfile();
         document.getElementById('profileNameDisplay').textContent = newName;
+        renderPosts();
       }
     });
 
+    // Настройки
     document.getElementById('settingsSidebarBtn').addEventListener('click', () => {
       document.getElementById('languageFilter').value = settings.language;
       document.getElementById('nsfwFilter').value = settings.nsfw;
@@ -1074,6 +1094,7 @@
       renderPosts();
     });
 
+    // Создание поста
     document.getElementById('openCreatePostBtn').addEventListener('click', () => {
       document.getElementById('createPostModal').classList.remove('hidden');
     });
@@ -1103,11 +1124,13 @@
       createPost(title, body, pendingImage);
     });
 
+    // Просмотр поста
     document.getElementById('closePostViewBtn').addEventListener('click', () => {
       document.getElementById('postViewModal').classList.add('hidden');
       currentPostId = null;
     });
 
+    // Сортировка
     document.querySelectorAll('.sort-btn').forEach(b => {
       b.addEventListener('click', () => {
         document.querySelectorAll('.sort-btn').forEach(x => x.classList.remove('active-sort'));
@@ -1117,6 +1140,7 @@
       });
     });
 
+    // Фильтр сайдбара
     document.querySelectorAll('.sidebar-link[data-filter]').forEach(link => {
       link.addEventListener('click', () => {
         document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
@@ -1126,6 +1150,7 @@
       });
     });
 
+    // Закрытие модалок по оверлею
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
