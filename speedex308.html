@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>Speedex308 — форум скорости</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #030303;
+      color: #d7dadc;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 0;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .speed-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .speed-line-bg {
+      position: absolute;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0, 255, 200, 0.25), transparent);
+      animation: lineShoot linear infinite;
+    }
+
+    @keyframes lineShoot {
+      0% { transform: translateX(-100%); opacity: 0; }
+      20% { opacity: 0.6; }
+      80% { opacity: 0.3; }
+      100% { transform: translateX(110vw); opacity: 0; }
+    }
+
+    .app-container {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      gap: 1.5rem;
+      max-width: 1000px;
+      width: 100%;
+      margin: 1.5rem;
+      align-items: flex-start;
+    }
+
+    .sidebar {
+      width: 240px;
+      background: #1a1a1b;
+      border: 1px solid #343536;
+      border-radius: 4px;
+      padding: 1rem;
+      position: sticky;
+      top: 1.5rem;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 1px solid #343536;
+    }
+
+    .sidebar-logo {
+      font-size: 1.6rem;
+      color: #00ffcc;
+    }
+
+    .sidebar-title {
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: #d7dadc;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.6rem 0.8rem;
+      border-radius: 4px;
+      color: #818384;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: 0.15s;
+      cursor: pointer;
+    }
+
+    .sidebar-link:hover {
+      background: #272729;
+      color: #d7dadc;
+    }
+
+    .sidebar-link.active {
+      background: #272729;
+      color: #00ffcc;
+      font-weight: 600;
+    }
+
+    .sidebar-link i {
+      width: 20px;
+      text-align: center;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      font-size: 0.7rem;
+      color: #818384;
+      text-align: center;
+      padding-top: 0.5rem;
+    }
+
+    .main-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .create-post-btn {
+      background: #1a1a1b;
+      border: 1px solid #343536;
+      border-radius: 4px;
+      padding: 0.8rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .create-post-btn:hover {
+      border-color: #00ffcc55;
+    }
+
+    .create-placeholder {
+      flex: 1;
+      background: #272729;
+      border: 1px solid #343536;
+      border-radius: 4px;
+      padding: 0.6rem 1rem;
+      color: #818384;
+      font-size: 0.9rem;
+    }
+
+    .sort-bar {
+      background: #1a1a1b;
+      border: 1px solid #343536;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .sort-btn {
+      background: none;
+      border: none;
+      color: #818384;
+      font-weight: 600;
+      font-size: 0.85rem;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: 0.15s;
+    }
+
+    .sort-btn:hover {
+      background: #272729;
+      color: #d7dadc;
+    }
+
+    .sort-btn.active-sort {
+      background: #272729;
+      color: #00ffcc;
+    }
+
+    .posts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .post-card {
+      background: #1a1a1b;
+      border: 1px solid #343536;
+      border-radius: 4px;
+      display: flex;
+      transition: 0.15s;
+      cursor: pointer;
+    }
+
+    .post-card:hover {
+      border-color: #00ffcc55;
+      box-shadow: 0 0 12px rgba(0,255,200,0.1);
+    }
+
+    .vote-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.6rem 0.5rem;
+      background: #161617;
+      border-radius: 4px 0 0 4px;
+      gap: 0.2rem;
+      min-width: 40px;
+    }
+
+    .vote-btn {
+      background: none;
+      border: none;
+      color: #818384;
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 0.2rem;
+      transition: 0.15s;
+      line-height: 1;
+    }
+
+    .vote-btn:hover {
+      color: #00ffcc;
+    }
+
+    .vote-btn.upvoted {
+      color: #00ffcc;
+    }
+
+    .vote-btn.downvoted {
+      color: #ff4466;
+    }
+
+    .vote-count {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #d7dadc;
+    }
+
+    .post-content {
+      padding: 0.7rem 1rem;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .post-header {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: #818384;
+      margin-bottom: 0.3rem;
+      flex-wrap: wrap;
+    }
+
+    .post-author {
+      font-weight: 700;
+      color: #00ffcc;
+      cursor: pointer;
+    }
+
+    .post-author:hover {
+      text-decoration: underline;
+    }
+
+    .nsfw-badge {
+      background: #ff4466;
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+      margin-left: 0.3rem;
+    }
+
+    .post-title-link {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #d7dadc;
+      text-decoration: none;
+      display: block;
+      margin-bottom: 0.3rem;
+      word-break: break-word;
+    }
+
+    .post-body-preview {
+      color: #9a9da0;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      max-height: 80px;
+      overflow: hidden;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .post-image-preview {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+      object-fit: cover;
+    }
+
+    .post-actions {
+      display: flex;
+      gap: 1.2rem;
+      margin-top: 0.4rem;
+      align-items: center;
+    }
+
+    .post-action-btn {
+      background: none;
+      border: none;
+      color: #818384;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0.5rem;
+      border-radius: 4px;
+      transition: 0.15s;
+    }
+
+    .post-action-btn:hover {
+      background: #272729;
+      color: #d7dadc;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: #818384;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s;
+    }
+
+    .modal {
+      background: #1a1a1b;
+      border: 1px solid #343536;
+      border-radius: 4px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 1rem;
+      border-bottom: 1px solid #343536;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #818384;
+      font-size: 1.4rem;
+      cursor: pointer;
+      padding: 0.3rem;
+    }
+
+    .close-btn:hover {
+      color: #d7dadc;
+    }
+
+    .modal-body {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .input-field {
+      background: #272729;
+      border: 1px solid #343536;
+      border-radius: 4px;
+      padding: 0.7rem;
+      color: #d7dadc;
+      font-size: 0.9rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .input-field:focus {
+      border-color: #00ffcc;
+      box-shadow: 0 0 8px rgba(0,255,200,0.15);
+    }
+
+    .textarea-field {
+      background: #272729;
+      border: 1px solid #343536;
+      border-radius: 4px;
+      padding: 0.7rem;
+      color: #d7dadc;
+      font-size: 0.9rem;
+      outline: none;
+      resize: vertical;
+      min-height: 120px;
+      font-family: inherit;
+    }
+
+    .textarea-field:focus {
+      border-color: #00ffcc;
+      box-shadow: 0 0 8px rgba(0,255,200,0.15);
+    }
+
+    .image-upload-area {
+      border: 2px dashed #343536;
+      border-radius: 4px;
+      padding: 1.5rem;
+      text-align: center;
+      color: #818384;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .image-upload-area:hover {
+      border-color: #00ffcc;
+      color: #00ffcc;
+    }
+
+    .image-upload-area.has-image {
+      border-color: #00ffcc;
+      padding: 0.5rem;
+    }
+
+    .image-upload-area img {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 4px;
+    }
+
+    .submit-btn {
+      background: #00ffcc;
+      border: none;
+      color: #000;
+      font-weight: 700;
+      padding: 0.7rem;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: 0.2s;
+      width: 100%;
+    }
+
+    .submit-btn:hover {
+      background: #00ddaa;
+      box-shadow: 0 0 15px rgba(0,255,200,0.3);
+    }
+
+    .post-full-view {
+      padding: 1rem;
+    }
+
+    .post-full-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .post-full-body {
+      color: #d7dadc;
+      font-size: 1rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 1rem 0;
+    }
+
+    .post-full-image {
+      max-width: 100%;
+      border-radius: 4px;
+      margin: 1rem 0;
+    }
+
+    .comments-section {
+      border-top: 1px solid #343536;
+      padding-top: 1rem;
+      margin-top: 1rem;
+    }
+
+    .comment-thread {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+    }
+
+    .comment-body {
+      flex: 1;
+    }
+
+    .comment-author {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #00ffcc;
+    }
+
+    .comment-text {
+      color: #d7dadc;
+      font-size: 0.9rem;
+    }
+
+    .comment-input-row {
+      display: flex;
+      gap: 0.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid #343536;
+    }
+
+    .settings-group {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .settings-group label {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #d7dadc;
+    }
+
+    .settings-group select {
+      background: #272729;
+      border: 1px solid #343536;
+      color: #d7dadc;
+      padding: 0.5rem;
+      border-radius: 4px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 750px) {
+      .app-container {
+        flex-direction: column;
+        margin: 0.5rem;
+      }
+      .sidebar {
+        width: 100%;
+        position: static;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="speed-bg" id="speedBg"></div>
+
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <i class="fas fa-bolt sidebar-logo"></i>
+        <span class="sidebar-title">SPEEDEX308</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-link active" data-filter="all"><i class="fas fa-home"></i> Главная</div>
+        <div class="sidebar-link" data-filter="popular"><i class="fas fa-fire"></i> Популярное</div>
+        <div class="sidebar-link" data-filter="new"><i class="fas fa-clock"></i> Новое</div>
+        <div class="sidebar-link" data-filter="top"><i class="fas fa-trophy"></i> Топ</div>
+      </nav>
+      <div class="sidebar-link" id="profileSidebarBtn"><i class="fas fa-user"></i> Профиль</div>
+      <div class="sidebar-link" id="settingsSidebarBtn"><i class="fas fa-cog"></i> Настройки</div>
+      <div class="sidebar-footer">будьте вежливы</div>
+    </aside>
+
+    <main class="main-content">
+      <div class="create-post-btn" id="openCreatePostBtn">
+        <div class="create-placeholder">Создать пост...</div>
+      </div>
+
+      <div class="sort-bar">
+        <button class="sort-btn active-sort" data-sort="best"><i class="fas fa-rocket"></i> Лучшие</button>
+        <button class="sort-btn" data-sort="new"><i class="fas fa-clock"></i> Новые</button>
+        <button class="sort-btn" data-sort="top"><i class="fas fa-arrow-up"></i> Топ</button>
+      </div>
+
+      <div class="posts-list" id="postsList">
+        <div class="empty-state">Пока нет постов. Создайте первый!</div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Модалка создания поста -->
+  <div class="modal-overlay hidden" id="createPostModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Создать пост</span>
+        <button class="close-btn" id="closeCreateModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="text" class="input-field" id="postTitleInput" placeholder="Заголовок">
+        <textarea class="textarea-field" id="postBodyInput" placeholder="Текст поста (необязательно)"></textarea>
+        <div class="image-upload-area" id="imageUploadArea">
+          <i class="fas fa-image"></i> Нажмите, чтобы прикрепить фото
+          <input type="file" accept="image/*" id="imageInput" hidden>
+        </div>
+        <button class="submit-btn" id="submitPostBtn">Опубликовать</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модалка просмотра поста -->
+  <div class="modal-overlay hidden" id="postViewModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="postViewTitle"></span>
+        <button class="close-btn" id="closePostViewBtn">&times;</button>
+      </div>
+      <div class="modal-body" id="postViewContent"></div>
+    </div>
+  </div>
+
+  <!-- Модалка профиля -->
+  <div class="modal-overlay hidden" id="profileModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Профиль</span>
+        <button class="close-btn" id="closeProfileBtn">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align:center;">
+        <div id="profileNameDisplay" style="font-size:1.3rem;font-weight:700;"></div>
+        <div id="profileStats" style="color:#818384;margin:0.5rem 0;"></div>
+        <input type="text" class="input-field" id="profileNameInput" placeholder="Ваше имя" style="text-align:center;">
+        <button class="submit-btn" id="saveProfileBtn">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модалка настроек -->
+  <div class="modal-overlay hidden" id="settingsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Настройки</span>
+        <button class="close-btn" id="closeSettingsBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-group">
+          <label>Язык постов</label>
+          <select id="languageFilter">
+            <option value="all">Все языки</option>
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
+          </select>
+
+          <label>NSFW контент</label>
+          <select id="nsfwFilter">
+            <option value="hide">Скрывать 18+</option>
+            <option value="show">Показывать всё</option>
+          </select>
+        </div>
+        <button class="submit-btn" id="saveSettingsBtn">Сохранить настройки</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const STORAGE_POSTS = 'speedex308_global_posts';
+      const STORAGE_PROFILE = 'speedex308_global_profile';
+      const STORAGE_SETTINGS = 'speedex308_global_settings';
+      let posts = [];
+      let profile = { name: 'Пользователь' };
+      let settings = { language: 'all', nsfw: 'hide' };
+      let currentPostId = null;
+      let currentSort = 'best';
+      let currentFilter = 'all';
+      let pendingImage = null;
+
+      const NSFW_WORDS = [
+        'мат', 'сука', 'блядь', 'хуй', 'пизда', 'ебать', 'fuck', 'shit', 'ass',
+        'расчлененка', 'убийство', 'кровь', 'жестокость', 'насилие',
+        'порно', 'секс', 'интим', 'голый', 'nude', 'violence', 'gore'
+      ];
+
+      function detectLanguage(text) {
+        const russianChars = /[а-яё]/i;
+        const englishChars = /[a-z]/i;
+        const hasRussian = russianChars.test(text);
+        const hasEnglish = englishChars.test(text);
+        if (hasRussian && !hasEnglish) return 'ru';
+        if (hasEnglish && !hasRussian) return 'en';
+        if (hasRussian && hasEnglish) return 'mixed';
+        return 'unknown';
+      }
+
+      function containsNSFW(text) {
+        const lowerText = text.toLowerCase();
+        return NSFW_WORDS.some(word => lowerText.includes(word));
+      }
+
+      function loadData() {
+        const savedPosts = localStorage.getItem(STORAGE_POSTS);
+        if (savedPosts) {
+          try { posts = JSON.parse(savedPosts); } catch(e) { posts = []; }
+        }
+        const savedProfile = localStorage.getItem(STORAGE_PROFILE);
+        if (savedProfile) {
+          try { profile = JSON.parse(savedProfile); } catch(e) {}
+        }
+        const savedSettings = localStorage.getItem(STORAGE_SETTINGS);
+        if (savedSettings) {
+          try { settings = JSON.parse(savedSettings); } catch(e) {}
+        }
+      }
+
+      function savePosts() { localStorage.setItem(STORAGE_POSTS, JSON.stringify(posts)); }
+      function saveProfile() { localStorage.setItem(STORAGE_PROFILE, JSON.stringify(profile)); }
+      function saveSettings() { localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(settings)); }
+
+      function getFilteredPosts() {
+        let filtered = [...posts];
+
+        if (settings.language !== 'all') {
+          filtered = filtered.filter(p => {
+            const lang = detectLanguage(p.title + ' ' + p.body);
+            return lang === settings.language || lang === 'mixed';
+          });
+        }
+
+        if (settings.nsfw === 'hide') {
+          filtered = filtered.filter(p => !p.nsfw);
+        }
+
+        const now = Date.now();
+        if (currentFilter === 'new') filtered.sort((a,b) => b.createdAt - a.createdAt);
+        else if (currentFilter === 'popular') filtered.sort((a,b) => (b.votes + b.comments.length*2) - (a.votes + a.comments.length*2));
+        else if (currentFilter === 'top') filtered.sort((a,b) => b.votes - a.votes);
+
+        if (currentSort === 'new') filtered.sort((a,b) => b.createdAt - a.createdAt);
+        else if (currentSort === 'top') filtered.sort((a,b) => b.votes - a.votes);
+        else if (currentSort === 'best') filtered.sort((a,b) => (b.votes / Math.max(1, (now - b.createdAt)/3600000)) - (a.votes / Math.max(1, (now - a.createdAt)/3600000)));
+
+        return filtered;
+      }
+
+      function renderPosts() {
+        const list = document.getElementById('postsList');
+        if (!list) return;
+        const filtered = getFilteredPosts();
+        if (filtered.length === 0) {
+          list.innerHTML = '<div class="empty-state">Пока нет постов. Создайте первый!</div>';
+          return;
+        }
+        list.innerHTML = '';
+        filtered.forEach(p => {
+          const card = document.createElement('div');
+          card.className = 'post-card';
+          card.innerHTML = `
+            <div class="vote-column">
+              <button class="vote-btn ${p.userVote === 1 ? 'upvoted' : ''}" data-id="${p.id}" data-vote="up">▲</button>
+              <span class="vote-count">${p.votes}</span>
+              <button class="vote-btn ${p.userVote === -1 ? 'downvoted' : ''}" data-id="${p.id}" data-vote="down">▼</button>
+            </div>
+            <div class="post-content" data-post-id="${p.id}">
+              <div class="post-header">
+                <span class="post-author">u/${escapeHtml(p.author)}</span>
+                <span>•</span>
+                <span>${timeAgo(p.createdAt)}</span>
+                ${p.nsfw ? '<span class="nsfw-badge">18+</span>' : ''}
+              </div>
+              <span class="post-title-link">${escapeHtml(p.title)}</span>
+              ${p.body ? `<div class="post-body-preview">${escapeHtml(p.body.substring(0, 200))}${p.body.length > 200 ? '...' : ''}</div>` : ''}
+              ${p.image ? `<img src="${p.image}" class="post-image-preview" alt="post image">` : ''}
+              <div class="post-actions">
+                <button class="post-action-btn comment-action" data-id="${p.id}">
+                  <i class="fas fa-comment-alt"></i> ${p.comments.length} комментариев
+                </button>
+              </div>
+            </div>
+          `;
+          list.appendChild(card);
+        });
+
+        document.querySelectorAll('.vote-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            const direction = btn.dataset.vote === 'up' ? 1 : -1;
+            votePost(id, direction);
+          });
+        });
+
+        document.querySelectorAll('.post-content').forEach(el => {
+          el.addEventListener('click', (e) => {
+            if (e.target.closest('.vote-btn') || e.target.closest('.post-author')) return;
+            const id = el.dataset.postId;
+            if (id) openPostView(id);
+          });
+        });
+
+        document.querySelectorAll('.comment-action').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            openPostView(id);
+          });
+        });
+      }
+
+      function votePost(id, direction) {
+        const post = posts.find(p => p.id === id);
+        if (!post) return;
+        if (post.userVote === direction) {
+          post.votes -= direction;
+          post.userVote = 0;
+        } else {
+          if (post.userVote !== 0) post.votes -= post.userVote;
+          post.votes += direction;
+          post.userVote = direction;
+        }
+        savePosts();
+        renderPosts();
+        if (currentPostId === id) renderPostViewContent();
+      }
+
+      function openPostView(id) {
+        currentPostId = id;
+        const post = posts.find(p => p.id === id);
+        if (!post) return;
+        document.getElementById('postViewTitle').textContent = post.title;
+        document.getElementById('postViewModal').classList.remove('hidden');
+        renderPostViewContent();
+      }
+
+      function renderPostViewContent() {
+        const post = posts.find(p => p.id === currentPostId);
+        if (!post) return;
+        const container = document.getElementById('postViewContent');
+        container.innerHTML = `
+          <div class="post-full-view">
+            <div style="color:#818384;font-size:0.8rem;">
+              u/${escapeHtml(post.author)} • ${timeAgo(post.createdAt)}
+              ${post.nsfw ? '<span class="nsfw-badge">18+</span>' : ''}
+            </div>
+            <div class="post-full-body">${escapeHtml(post.body || '')}</div>
+            ${post.image ? `<img src="${post.image}" class="post-full-image" alt="post image">` : ''}
+            <div style="display:flex;gap:0.5rem;margin:1rem 0;">
+              <button class="vote-btn ${post.userVote === 1 ? 'upvoted' : ''}" id="postViewUpvote">▲ ${post.votes}</button>
+              <button class="vote-btn ${post.userVote === -1 ? 'downvoted' : ''}" id="postViewDownvote">▼</button>
+            </div>
+            <div class="comments-section">
+              <strong>Комментарии (${post.comments.length})</strong>
+              ${post.comments.length === 0 ? '<div style="color:#818384;padding:0.5rem 0;">Пока нет комментариев</div>' : ''}
+              ${post.comments.map((c, i) => `
+                <div class="comment-thread">
+                  <div class="comment-body">
+                    <span class="comment-author">${escapeHtml(c.author)}</span>
+                    <div class="comment-text">${escapeHtml(c.text)}</div>
+                    <small style="color:#818384;">${timeAgo(c.createdAt)}</small>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <div class="comment-input-row">
+              <input type="text" class="input-field" id="postViewCommentInput" placeholder="Ваш комментарий...">
+              <button class="submit-btn" id="postViewAddCommentBtn" style="width:auto;padding:0.5rem 1.5rem;">Ответить</button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('postViewUpvote').addEventListener('click', () => votePost(currentPostId, 1));
+        document.getElementById('postViewDownvote').addEventListener('click', () => votePost(currentPostId, -1));
+        document.getElementById('postViewAddCommentBtn').addEventListener('click', () => {
+          const inp = document.getElementById('postViewCommentInput');
+          addComment(inp.value);
+          inp.value = '';
+        });
+        document.getElementById('postViewCommentInput').addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') document.getElementById('postViewAddCommentBtn').click();
+        });
+      }
+
+      function addComment(text) {
+        if (!text.trim() || !currentPostId) return;
+        const post = posts.find(p => p.id === currentPostId);
+        if (!post) return;
+        post.comments.push({ author: profile.name, text: text.trim(), createdAt: Date.now() });
+        savePosts();
+        renderPostViewContent();
+        renderPosts();
+      }
+
+      function createPost(title, body, image) {
+        if (!title.trim()) return;
+        const fullText = title + ' ' + body;
+        const isNsfw = containsNSFW(fullText);
+        const newPost = {
+          id: 'p' + Date.now(),
+          title: title.trim(),
+          body: body.trim(),
+          image: image || null,
+          author: profile.name,
+          votes: 1,
+          userVote: 1,
+          nsfw: isNsfw,
+          comments: [],
+          createdAt: Date.now()
+        };
+        posts.unshift(newPost);
+        savePosts();
+        renderPosts();
+        closeCreateModal();
+      }
+
+      function timeAgo(ts) {
+        const diff = Date.now() - ts;
+        const mins = Math.floor(diff/60000);
+        if (mins < 1) return 'сейчас';
+        if (mins < 60) return `${mins} мин.`;
+        const hrs = Math.floor(mins/60);
+        if (hrs < 24) return `${hrs} ч.`;
+        return `${Math.floor(hrs/24)} дн.`;
+      }
+
+      function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+      function closeCreateModal() {
+        document.getElementById('createPostModal').classList.add('hidden');
+        document.getElementById('postTitleInput').value = '';
+        document.getElementById('postBodyInput').value = '';
+        pendingImage = null;
+        resetImageUpload();
+      }
+
+      function resetImageUpload() {
+        const area = document.getElementById('imageUploadArea');
+        area.classList.remove('has-image');
+        area.innerHTML = '<i class="fas fa-image"></i> Нажмите, чтобы прикрепить фото';
+        document.getElementById('imageInput').value = '';
+      }
+
+      loadData();
+      renderPosts();
+
+      document.getElementById('profileSidebarBtn').addEventListener('click', () => {
+        document.getElementById('profileNameDisplay').textContent = profile.name;
+        const userPosts = posts.filter(p => p.author === profile.name);
+        const userComments = posts.reduce((sum, p) => sum + p.comments.filter(c => c.author === profile.name).length, 0);
+        document.getElementById('profileStats').textContent = `Постов: ${userPosts.length} | Комментариев: ${userComments}`;
+        document.getElementById('profileNameInput').value = profile.name;
+        document.getElementById('profileModal').classList.remove('hidden');
+      });
+
+      document.getElementById('closeProfileBtn').addEventListener('click', () => {
+        document.getElementById('profileModal').classList.add('hidden');
+      });
+
+      document.getElementById('saveProfileBtn').addEventListener('click', () => {
+        const newName = document.getElementById('profileNameInput').value.trim();
+        if (newName) {
+          profile.name = newName;
+          saveProfile();
+          document.getElementById('profileNameDisplay').textContent = newName;
+          renderPosts();
+        }
+      });
+
+      document.getElementById('settingsSidebarBtn').addEventListener('click', () => {
+        document.getElementById('languageFilter').value = settings.language;
+        document.getElementById('nsfwFilter').value = settings.nsfw;
+        document.getElementById('settingsModal').classList.remove('hidden');
+      });
+
+      document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+        document.getElementById('settingsModal').classList.add('hidden');
+      });
+
+      document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+        settings.language = document.getElementById('languageFilter').value;
+        settings.nsfw = document.getElementById('nsfwFilter').value;
+        saveSettings();
+        document.getElementById('settingsModal').classList.add('hidden');
+        renderPosts();
+      });
+
+      document.getElementById('openCreatePostBtn').addEventListener('click', () => {
+        document.getElementById('createPostModal').classList.remove('hidden');
+      });
+
+      document.getElementById('closeCreateModalBtn').addEventListener('click', closeCreateModal);
+
+      document.getElementById('imageUploadArea').addEventListener('click', () => {
+        document.getElementById('imageInput').click();
+      });
+
+      document.getElementById('imageInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          pendingImage = ev.target.result;
+          const area = document.getElementById('imageUploadArea');
+          area.classList.add('has-image');
+          area.innerHTML = `<img src="${pendingImage}" alt="preview">`;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      document.getElementById('submitPostBtn').addEventListener('click', () => {
+        const title = document.getElementById('postTitleInput').value;
+        const body = document.getElementById('postBodyInput').value;
+        createPost(title, body, pendingImage);
+      });
+
+      document.getElementById('closePostViewBtn').addEventListener('click', () => {
+        document.getElementById('postViewModal').classList.add('hidden');
+        currentPostId = null;
+        renderPosts();
+      });
+
+      document.querySelectorAll('.sort-btn').forEach(b => {
+        b.addEventListener('click', () => {
+          document.querySelectorAll('.sort-btn').forEach(x => x.classList.remove('active-sort'));
+          b.classList.add('active-sort');
+          currentSort = b.dataset.sort;
+          renderPosts();
+        });
+      });
+
+      document.querySelectorAll('.sidebar-link[data-filter]').forEach(link => {
+        link.addEventListener('click', () => {
+          document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+          link.classList.add('active');
+          currentFilter = link.dataset.filter;
+          renderPosts();
+        });
+      });
+
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            overlay.classList.add('hidden');
+            if (overlay.id === 'postViewModal') {
+              currentPostId = null;
+              renderPosts();
+            }
+          }
+        });
+      });
+
+      const bg = document.getElementById('speedBg');
+      function createBgLine() {
+        const line = document.createElement('div');
+        line.className = 'speed-line-bg';
+        line.style.top = Math.random()*100 + '%';
+        line.style.width = (Math.random()*180+80)+'px';
+        line.style.animationDuration = (Math.random()*4+3)+'s';
+        bg.appendChild(line);
+        setTimeout(() => line.remove(), 6000);
+      }
+      setInterval(createBgLine, 500);
+      for (let i=0;i<8;i++) setTimeout(createBgLine, i*250);
+    })();
+  </script>
+</body>
+</html>
