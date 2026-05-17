@@ -18,12 +18,6 @@
 - HTML5, CSS3, JavaScript
 - localStorage для хранения данных
 - Netlify для хостинга
-
-## 📦 Установка
-
-1. Скачай файл `index.html`
-2. Открой в браузере — форум готов к работе
-
 ## 🌍 Деплой
 
 Сайт доступен по адресу: [speedex308.netlify.app](https://speedex308.netlify.app)
