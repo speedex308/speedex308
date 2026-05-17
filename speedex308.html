@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>Speedex308 — форум скорости</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js">
+  </script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js">
+  </script>
+  
   <style>
     * {
       margin: 0;
@@ -363,6 +370,12 @@
       color: #818384;
     }
 
+    .loading-state {
+      text-align: center;
+      padding: 2rem;
+      color: #00ffcc;
+    }
+
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -505,12 +518,6 @@
       padding: 1rem;
     }
 
-    .post-full-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-
     .post-full-body {
       color: #d7dadc;
       font-size: 1rem;
@@ -640,12 +647,12 @@
       </div>
 
       <div class="posts-list" id="postsList">
-        <div class="empty-state">Пока нет постов. Создайте первый!</div>
+        <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Загрузка постов...</div>
       </div>
     </main>
   </div>
 
-  <!-- Модалка создания поста -->
+  <!-- Модалки (без изменений) -->
   <div class="modal-overlay hidden" id="createPostModal">
     <div class="modal">
       <div class="modal-header">
@@ -664,7 +671,6 @@
     </div>
   </div>
 
-  <!-- Модалка просмотра поста -->
   <div class="modal-overlay hidden" id="postViewModal">
     <div class="modal">
       <div class="modal-header">
@@ -675,7 +681,6 @@
     </div>
   </div>
 
-  <!-- Модалка профиля -->
   <div class="modal-overlay hidden" id="profileModal">
     <div class="modal">
       <div class="modal-header">
@@ -691,7 +696,6 @@
     </div>
   </div>
 
-  <!-- Модалка настроек -->
   <div class="modal-overlay hidden" id="settingsModal">
     <div class="modal">
       <div class="modal-header">
@@ -706,7 +710,6 @@
             <option value="ru">Русский</option>
             <option value="en">English</option>
           </select>
-
           <label>NSFW контент</label>
           <select id="nsfwFilter">
             <option value="hide">Скрывать 18+</option>
@@ -719,403 +722,432 @@
   </div>
 
   <script>
-    (function() {
-      const STORAGE_POSTS = 'speedex308_global_posts';
-      const STORAGE_PROFILE = 'speedex308_global_profile';
-      const STORAGE_SETTINGS = 'speedex308_global_settings';
-      let posts = [];
-      let profile = { name: 'Пользователь' };
-      let settings = { language: 'all', nsfw: 'hide' };
-      let currentPostId = null;
-      let currentSort = 'best';
-      let currentFilter = 'all';
-      let pendingImage = null;
+    // ⚡ КОНФИГУРАЦИЯ FIREBASE — ЗАМЕНИ НА СВОИ ДАННЫЕ ⚡
+    const firebaseConfig = {
+      apiKey: "AIzaSy...",
+      authDomain: "speedex308.firebaseapp.com",
+      projectId: "speedex308",
+      storageBucket: "speedex308.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abc123"
+    };
 
-      const NSFW_WORDS = [
-        'мат', 'сука', 'блядь', 'хуй', 'пизда', 'ебать', 'fuck', 'shit', 'ass',
-        'расчлененка', 'убийство', 'кровь', 'жестокость', 'насилие',
-        'порно', 'секс', 'интим', 'голый', 'nude', 'violence', 'gore'
-      ];
+    // Инициализация Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-      function detectLanguage(text) {
-        const russianChars = /[а-яё]/i;
-        const englishChars = /[a-z]/i;
-        const hasRussian = russianChars.test(text);
-        const hasEnglish = englishChars.test(text);
-        if (hasRussian && !hasEnglish) return 'ru';
-        if (hasEnglish && !hasRussian) return 'en';
-        if (hasRussian && hasEnglish) return 'mixed';
-        return 'unknown';
+    // ==================== ЛОГИКА ФОРУМА ====================
+    let posts = [];
+    let profile = { name: 'Пользователь' };
+    let settings = { language: 'all', nsfw: 'hide' };
+    let currentPostId = null;
+    let currentSort = 'best';
+    let currentFilter = 'all';
+    let pendingImage = null;
+    let unsubscribe = null;
+
+    const NSFW_WORDS = [
+      'мат', 'сука', 'блядь', 'хуй', 'пизда', 'ебать', 'fuck', 'shit', 'ass',
+      'расчлененка', 'убийство', 'кровь', 'жестокость', 'насилие',
+      'порно', 'секс', 'интим', 'голый', 'nude', 'violence', 'gore'
+    ];
+
+    function detectLanguage(text) {
+      const russianChars = /[а-яё]/i;
+      const englishChars = /[a-z]/i;
+      const hasRussian = russianChars.test(text);
+      const hasEnglish = englishChars.test(text);
+      if (hasRussian && !hasEnglish) return 'ru';
+      if (hasEnglish && !hasRussian) return 'en';
+      if (hasRussian && hasEnglish) return 'mixed';
+      return 'unknown';
+    }
+
+    function containsNSFW(text) {
+      const lowerText = text.toLowerCase();
+      return NSFW_WORDS.some(word => lowerText.includes(word));
+    }
+
+    // Загрузка профиля и настроек из localStorage
+    function loadLocalData() {
+      const savedProfile = localStorage.getItem('speedex308_profile');
+      if (savedProfile) {
+        try { profile = JSON.parse(savedProfile); } catch(e) {}
       }
-
-      function containsNSFW(text) {
-        const lowerText = text.toLowerCase();
-        return NSFW_WORDS.some(word => lowerText.includes(word));
+      const savedSettings = localStorage.getItem('speedex308_settings');
+      if (savedSettings) {
+        try { settings = JSON.parse(savedSettings); } catch(e) {}
       }
+    }
 
-      function loadData() {
-        const savedPosts = localStorage.getItem(STORAGE_POSTS);
-        if (savedPosts) {
-          try { posts = JSON.parse(savedPosts); } catch(e) { posts = []; }
-        }
-        const savedProfile = localStorage.getItem(STORAGE_PROFILE);
-        if (savedProfile) {
-          try { profile = JSON.parse(savedProfile); } catch(e) {}
-        }
-        const savedSettings = localStorage.getItem(STORAGE_SETTINGS);
-        if (savedSettings) {
-          try { settings = JSON.parse(savedSettings); } catch(e) {}
-        }
-      }
+    function saveProfile() { localStorage.setItem('speedex308_profile', JSON.stringify(profile)); }
+    function saveSettings() { localStorage.setItem('speedex308_settings', JSON.stringify(settings)); }
 
-      function savePosts() { localStorage.setItem(STORAGE_POSTS, JSON.stringify(posts)); }
-      function saveProfile() { localStorage.setItem(STORAGE_PROFILE, JSON.stringify(profile)); }
-      function saveSettings() { localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(settings)); }
-
-      function getFilteredPosts() {
-        let filtered = [...posts];
-
-        if (settings.language !== 'all') {
-          filtered = filtered.filter(p => {
-            const lang = detectLanguage(p.title + ' ' + p.body);
-            return lang === settings.language || lang === 'mixed';
-          });
-        }
-
-        if (settings.nsfw === 'hide') {
-          filtered = filtered.filter(p => !p.nsfw);
-        }
-
-        const now = Date.now();
-        if (currentFilter === 'new') filtered.sort((a,b) => b.createdAt - a.createdAt);
-        else if (currentFilter === 'popular') filtered.sort((a,b) => (b.votes + b.comments.length*2) - (a.votes + a.comments.length*2));
-        else if (currentFilter === 'top') filtered.sort((a,b) => b.votes - a.votes);
-
-        if (currentSort === 'new') filtered.sort((a,b) => b.createdAt - a.createdAt);
-        else if (currentSort === 'top') filtered.sort((a,b) => b.votes - a.votes);
-        else if (currentSort === 'best') filtered.sort((a,b) => (b.votes / Math.max(1, (now - b.createdAt)/3600000)) - (a.votes / Math.max(1, (now - a.createdAt)/3600000)));
-
-        return filtered;
-      }
-
-      function renderPosts() {
-        const list = document.getElementById('postsList');
-        if (!list) return;
-        const filtered = getFilteredPosts();
-        if (filtered.length === 0) {
-          list.innerHTML = '<div class="empty-state">Пока нет постов. Создайте первый!</div>';
-          return;
-        }
-        list.innerHTML = '';
-        filtered.forEach(p => {
-          const card = document.createElement('div');
-          card.className = 'post-card';
-          card.innerHTML = `
-            <div class="vote-column">
-              <button class="vote-btn ${p.userVote === 1 ? 'upvoted' : ''}" data-id="${p.id}" data-vote="up">▲</button>
-              <span class="vote-count">${p.votes}</span>
-              <button class="vote-btn ${p.userVote === -1 ? 'downvoted' : ''}" data-id="${p.id}" data-vote="down">▼</button>
-            </div>
-            <div class="post-content" data-post-id="${p.id}">
-              <div class="post-header">
-                <span class="post-author">u/${escapeHtml(p.author)}</span>
-                <span>•</span>
-                <span>${timeAgo(p.createdAt)}</span>
-                ${p.nsfw ? '<span class="nsfw-badge">18+</span>' : ''}
-              </div>
-              <span class="post-title-link">${escapeHtml(p.title)}</span>
-              ${p.body ? `<div class="post-body-preview">${escapeHtml(p.body.substring(0, 200))}${p.body.length > 200 ? '...' : ''}</div>` : ''}
-              ${p.image ? `<img src="${p.image}" class="post-image-preview" alt="post image">` : ''}
-              <div class="post-actions">
-                <button class="post-action-btn comment-action" data-id="${p.id}">
-                  <i class="fas fa-comment-alt"></i> ${p.comments.length} комментариев
-                </button>
-              </div>
-            </div>
-          `;
-          list.appendChild(card);
+    // Подписка на обновления Firestore
+    function subscribeToPosts() {
+      if (unsubscribe) unsubscribe();
+      
+      document.getElementById('postsList').innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Загрузка постов...</div>';
+      
+      unsubscribe = db.collection('posts').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+        posts = [];
+        snapshot.forEach((doc) => {
+          posts.push({ id: doc.id, ...doc.data() });
         });
-
-        document.querySelectorAll('.vote-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const id = btn.dataset.id;
-            const direction = btn.dataset.vote === 'up' ? 1 : -1;
-            votePost(id, direction);
-          });
-        });
-
-        document.querySelectorAll('.post-content').forEach(el => {
-          el.addEventListener('click', (e) => {
-            if (e.target.closest('.vote-btn') || e.target.closest('.post-author')) return;
-            const id = el.dataset.postId;
-            if (id) openPostView(id);
-          });
-        });
-
-        document.querySelectorAll('.comment-action').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const id = btn.dataset.id;
-            openPostView(id);
-          });
-        });
-      }
-
-      function votePost(id, direction) {
-        const post = posts.find(p => p.id === id);
-        if (!post) return;
-        if (post.userVote === direction) {
-          post.votes -= direction;
-          post.userVote = 0;
-        } else {
-          if (post.userVote !== 0) post.votes -= post.userVote;
-          post.votes += direction;
-          post.userVote = direction;
-        }
-        savePosts();
         renderPosts();
-        if (currentPostId === id) renderPostViewContent();
+      }, (error) => {
+        console.error('Ошибка загрузки:', error);
+        document.getElementById('postsList').innerHTML = '<div class="empty-state">Ошибка загрузки. Проверь конфигурацию Firebase.</div>';
+      });
+    }
+
+    function getFilteredPosts() {
+      let filtered = [...posts];
+
+      if (settings.language !== 'all') {
+        filtered = filtered.filter(p => {
+          const lang = detectLanguage(p.title + ' ' + p.body);
+          return lang === settings.language || lang === 'mixed';
+        });
       }
 
-      function openPostView(id) {
-        currentPostId = id;
-        const post = posts.find(p => p.id === id);
-        if (!post) return;
-        document.getElementById('postViewTitle').textContent = post.title;
-        document.getElementById('postViewModal').classList.remove('hidden');
-        renderPostViewContent();
+      if (settings.nsfw === 'hide') {
+        filtered = filtered.filter(p => !p.nsfw);
       }
 
-      function renderPostViewContent() {
-        const post = posts.find(p => p.id === currentPostId);
-        if (!post) return;
-        const container = document.getElementById('postViewContent');
-        container.innerHTML = `
-          <div class="post-full-view">
-            <div style="color:#818384;font-size:0.8rem;">
-              u/${escapeHtml(post.author)} • ${timeAgo(post.createdAt)}
-              ${post.nsfw ? '<span class="nsfw-badge">18+</span>' : ''}
+      const now = Date.now();
+      if (currentFilter === 'new') filtered.sort((a,b) => b.createdAt - a.createdAt);
+      else if (currentFilter === 'popular') filtered.sort((a,b) => (b.votes + b.comments.length*2) - (a.votes + a.comments.length*2));
+      else if (currentFilter === 'top') filtered.sort((a,b) => b.votes - a.votes);
+
+      if (currentSort === 'new') filtered.sort((a,b) => b.createdAt - a.createdAt);
+      else if (currentSort === 'top') filtered.sort((a,b) => b.votes - a.votes);
+      else if (currentSort === 'best') filtered.sort((a,b) => (b.votes / Math.max(1, (now - b.createdAt)/3600000)) - (a.votes / Math.max(1, (now - a.createdAt)/3600000)));
+
+      return filtered;
+    }
+
+    function renderPosts() {
+      const list = document.getElementById('postsList');
+      if (!list) return;
+      const filtered = getFilteredPosts();
+      if (filtered.length === 0) {
+        list.innerHTML = '<div class="empty-state">Пока нет постов. Создайте первый!</div>';
+        return;
+      }
+      list.innerHTML = '';
+      filtered.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'post-card';
+        card.innerHTML = `
+          <div class="vote-column">
+            <button class="vote-btn ${p.userVotes && p.userVotes[profile.name] === 1 ? 'upvoted' : ''}" data-id="${p.id}" data-vote="up">▲</button>
+            <span class="vote-count">${p.votes || 0}</span>
+            <button class="vote-btn ${p.userVotes && p.userVotes[profile.name] === -1 ? 'downvoted' : ''}" data-id="${p.id}" data-vote="down">▼</button>
+          </div>
+          <div class="post-content" data-post-id="${p.id}">
+            <div class="post-header">
+              <span class="post-author">u/${escapeHtml(p.author)}</span>
+              <span>•</span>
+              <span>${timeAgo(p.createdAt)}</span>
+              ${p.nsfw ? '<span class="nsfw-badge">18+</span>' : ''}
             </div>
-            <div class="post-full-body">${escapeHtml(post.body || '')}</div>
-            ${post.image ? `<img src="${post.image}" class="post-full-image" alt="post image">` : ''}
-            <div style="display:flex;gap:0.5rem;margin:1rem 0;">
-              <button class="vote-btn ${post.userVote === 1 ? 'upvoted' : ''}" id="postViewUpvote">▲ ${post.votes}</button>
-              <button class="vote-btn ${post.userVote === -1 ? 'downvoted' : ''}" id="postViewDownvote">▼</button>
-            </div>
-            <div class="comments-section">
-              <strong>Комментарии (${post.comments.length})</strong>
-              ${post.comments.length === 0 ? '<div style="color:#818384;padding:0.5rem 0;">Пока нет комментариев</div>' : ''}
-              ${post.comments.map((c, i) => `
-                <div class="comment-thread">
-                  <div class="comment-body">
-                    <span class="comment-author">${escapeHtml(c.author)}</span>
-                    <div class="comment-text">${escapeHtml(c.text)}</div>
-                    <small style="color:#818384;">${timeAgo(c.createdAt)}</small>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-            <div class="comment-input-row">
-              <input type="text" class="input-field" id="postViewCommentInput" placeholder="Ваш комментарий...">
-              <button class="submit-btn" id="postViewAddCommentBtn" style="width:auto;padding:0.5rem 1.5rem;">Ответить</button>
+            <span class="post-title-link">${escapeHtml(p.title)}</span>
+            ${p.body ? `<div class="post-body-preview">${escapeHtml(p.body.substring(0, 200))}${p.body.length > 200 ? '...' : ''}</div>` : ''}
+            ${p.image ? `<img src="${p.image}" class="post-image-preview" alt="post image">` : ''}
+            <div class="post-actions">
+              <button class="post-action-btn comment-action" data-id="${p.id}">
+                <i class="fas fa-comment-alt"></i> ${p.comments ? p.comments.length : 0} комментариев
+              </button>
             </div>
           </div>
         `;
+        list.appendChild(card);
+      });
 
-        document.getElementById('postViewUpvote').addEventListener('click', () => votePost(currentPostId, 1));
-        document.getElementById('postViewDownvote').addEventListener('click', () => votePost(currentPostId, -1));
-        document.getElementById('postViewAddCommentBtn').addEventListener('click', () => {
-          const inp = document.getElementById('postViewCommentInput');
-          addComment(inp.value);
-          inp.value = '';
+      document.querySelectorAll('.vote-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const direction = btn.dataset.vote === 'up' ? 1 : -1;
+          votePost(id, direction);
         });
-        document.getElementById('postViewCommentInput').addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') document.getElementById('postViewAddCommentBtn').click();
+      });
+
+      document.querySelectorAll('.post-content').forEach(el => {
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('.vote-btn') || e.target.closest('.post-author')) return;
+          const id = el.dataset.postId;
+          if (id) openPostView(id);
         });
+      });
+
+      document.querySelectorAll('.comment-action').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          openPostView(id);
+        });
+      });
+    }
+
+    async function votePost(postId, direction) {
+      const postRef = db.collection('posts').doc(postId);
+      const post = posts.find(p => p.id === postId);
+      if (!post) return;
+
+      const userVotes = post.userVotes || {};
+      const currentVote = userVotes[profile.name] || 0;
+      let voteChange = 0;
+
+      if (currentVote === direction) {
+        delete userVotes[profile.name];
+        voteChange = -direction;
+      } else {
+        if (currentVote !== 0) voteChange = -currentVote;
+        userVotes[profile.name] = direction;
+        voteChange += direction;
       }
 
-      function addComment(text) {
-        if (!text.trim() || !currentPostId) return;
-        const post = posts.find(p => p.id === currentPostId);
-        if (!post) return;
-        post.comments.push({ author: profile.name, text: text.trim(), createdAt: Date.now() });
-        savePosts();
-        renderPostViewContent();
-        renderPosts();
+      await postRef.update({
+        votes: firebase.firestore.FieldValue.increment(voteChange),
+        userVotes: userVotes
+      });
+    }
+
+    function openPostView(postId) {
+      currentPostId = postId;
+      const post = posts.find(p => p.id === postId);
+      if (!post) return;
+      document.getElementById('postViewTitle').textContent = post.title;
+      document.getElementById('postViewModal').classList.remove('hidden');
+      renderPostViewContent();
+    }
+
+    function renderPostViewContent() {
+      const post = posts.find(p => p.id === currentPostId);
+      if (!post) return;
+      const container = document.getElementById('postViewContent');
+      container.innerHTML = `
+        <div class="post-full-view">
+          <div style="color:#818384;font-size:0.8rem;">
+            u/${escapeHtml(post.author)} • ${timeAgo(post.createdAt)}
+            ${post.nsfw ? '<span class="nsfw-badge">18+</span>' : ''}
+          </div>
+          <div class="post-full-body">${escapeHtml(post.body || '')}</div>
+          ${post.image ? `<img src="${post.image}" class="post-full-image" alt="post image">` : ''}
+          <div style="display:flex;gap:0.5rem;margin:1rem 0;">
+            <button class="vote-btn ${post.userVotes && post.userVotes[profile.name] === 1 ? 'upvoted' : ''}" id="postViewUpvote">▲ ${post.votes || 0}</button>
+            <button class="vote-btn ${post.userVotes && post.userVotes[profile.name] === -1 ? 'downvoted' : ''}" id="postViewDownvote">▼</button>
+          </div>
+          <div class="comments-section">
+            <strong>Комментарии (${post.comments ? post.comments.length : 0})</strong>
+            ${!post.comments || post.comments.length === 0 ? '<div style="color:#818384;padding:0.5rem 0;">Пока нет комментариев</div>' : ''}
+            ${post.comments ? post.comments.map((c, i) => `
+              <div class="comment-thread">
+                <div class="comment-body">
+                  <span class="comment-author">${escapeHtml(c.author)}</span>
+                  <div class="comment-text">${escapeHtml(c.text)}</div>
+                  <small style="color:#818384;">${timeAgo(c.createdAt)}</small>
+                </div>
+              </div>
+            `).join('') : ''}
+          </div>
+          <div class="comment-input-row">
+            <input type="text" class="input-field" id="postViewCommentInput" placeholder="Ваш комментарий...">
+            <button class="submit-btn" id="postViewAddCommentBtn" style="width:auto;padding:0.5rem 1.5rem;">Ответить</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('postViewUpvote').addEventListener('click', () => votePost(currentPostId, 1));
+      document.getElementById('postViewDownvote').addEventListener('click', () => votePost(currentPostId, -1));
+      document.getElementById('postViewAddCommentBtn').addEventListener('click', () => {
+        const inp = document.getElementById('postViewCommentInput');
+        addComment(inp.value);
+        inp.value = '';
+      });
+      document.getElementById('postViewCommentInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') document.getElementById('postViewAddCommentBtn').click();
+      });
+    }
+
+    async function addComment(text) {
+      if (!text.trim() || !currentPostId) return;
+      const postRef = db.collection('posts').doc(currentPostId);
+      const comment = {
+        author: profile.name,
+        text: text.trim(),
+        createdAt: Date.now()
+      };
+      await postRef.update({
+        comments: firebase.firestore.FieldValue.arrayUnion(comment)
+      });
+    }
+
+    async function createPost(title, body, image) {
+      if (!title.trim()) return;
+      const fullText = title + ' ' + body;
+      const isNsfw = containsNSFW(fullText);
+      await db.collection('posts').add({
+        title: title.trim(),
+        body: body.trim(),
+        image: image || null,
+        author: profile.name,
+        votes: 1,
+        userVotes: { [profile.name]: 1 },
+        nsfw: isNsfw,
+        comments: [],
+        createdAt: Date.now()
+      });
+      closeCreateModal();
+    }
+
+    function timeAgo(ts) {
+      const diff = Date.now() - ts;
+      const mins = Math.floor(diff/60000);
+      if (mins < 1) return 'сейчас';
+      if (mins < 60) return `${mins} мин.`;
+      const hrs = Math.floor(mins/60);
+      if (hrs < 24) return `${hrs} ч.`;
+      return `${Math.floor(hrs/24)} дн.`;
+    }
+
+    function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function closeCreateModal() {
+      document.getElementById('createPostModal').classList.add('hidden');
+      document.getElementById('postTitleInput').value = '';
+      document.getElementById('postBodyInput').value = '';
+      pendingImage = null;
+      resetImageUpload();
+    }
+
+    function resetImageUpload() {
+      const area = document.getElementById('imageUploadArea');
+      area.classList.remove('has-image');
+      area.innerHTML = '<i class="fas fa-image"></i> Нажмите, чтобы прикрепить фото';
+      document.getElementById('imageInput').value = '';
+    }
+
+    // Инициализация
+    loadLocalData();
+    subscribeToPosts();
+
+    // Обработчики событий (все как раньше)
+    document.getElementById('profileSidebarBtn').addEventListener('click', () => {
+      document.getElementById('profileNameDisplay').textContent = profile.name;
+      const userPosts = posts.filter(p => p.author === profile.name);
+      document.getElementById('profileStats').textContent = `Постов: ${userPosts.length}`;
+      document.getElementById('profileNameInput').value = profile.name;
+      document.getElementById('profileModal').classList.remove('hidden');
+    });
+
+    document.getElementById('closeProfileBtn').addEventListener('click', () => {
+      document.getElementById('profileModal').classList.add('hidden');
+    });
+
+    document.getElementById('saveProfileBtn').addEventListener('click', () => {
+      const newName = document.getElementById('profileNameInput').value.trim();
+      if (newName) {
+        profile.name = newName;
+        saveProfile();
+        document.getElementById('profileNameDisplay').textContent = newName;
       }
+    });
 
-      function createPost(title, body, image) {
-        if (!title.trim()) return;
-        const fullText = title + ' ' + body;
-        const isNsfw = containsNSFW(fullText);
-        const newPost = {
-          id: 'p' + Date.now(),
-          title: title.trim(),
-          body: body.trim(),
-          image: image || null,
-          author: profile.name,
-          votes: 1,
-          userVote: 1,
-          nsfw: isNsfw,
-          comments: [],
-          createdAt: Date.now()
-        };
-        posts.unshift(newPost);
-        savePosts();
-        renderPosts();
-        closeCreateModal();
-      }
+    document.getElementById('settingsSidebarBtn').addEventListener('click', () => {
+      document.getElementById('languageFilter').value = settings.language;
+      document.getElementById('nsfwFilter').value = settings.nsfw;
+      document.getElementById('settingsModal').classList.remove('hidden');
+    });
 
-      function timeAgo(ts) {
-        const diff = Date.now() - ts;
-        const mins = Math.floor(diff/60000);
-        if (mins < 1) return 'сейчас';
-        if (mins < 60) return `${mins} мин.`;
-        const hrs = Math.floor(mins/60);
-        if (hrs < 24) return `${hrs} ч.`;
-        return `${Math.floor(hrs/24)} дн.`;
-      }
+    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+      document.getElementById('settingsModal').classList.add('hidden');
+    });
 
-      function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-      function closeCreateModal() {
-        document.getElementById('createPostModal').classList.add('hidden');
-        document.getElementById('postTitleInput').value = '';
-        document.getElementById('postBodyInput').value = '';
-        pendingImage = null;
-        resetImageUpload();
-      }
-
-      function resetImageUpload() {
-        const area = document.getElementById('imageUploadArea');
-        area.classList.remove('has-image');
-        area.innerHTML = '<i class="fas fa-image"></i> Нажмите, чтобы прикрепить фото';
-        document.getElementById('imageInput').value = '';
-      }
-
-      loadData();
+    document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+      settings.language = document.getElementById('languageFilter').value;
+      settings.nsfw = document.getElementById('nsfwFilter').value;
+      saveSettings();
+      document.getElementById('settingsModal').classList.add('hidden');
       renderPosts();
+    });
 
-      document.getElementById('profileSidebarBtn').addEventListener('click', () => {
-        document.getElementById('profileNameDisplay').textContent = profile.name;
-        const userPosts = posts.filter(p => p.author === profile.name);
-        const userComments = posts.reduce((sum, p) => sum + p.comments.filter(c => c.author === profile.name).length, 0);
-        document.getElementById('profileStats').textContent = `Постов: ${userPosts.length} | Комментариев: ${userComments}`;
-        document.getElementById('profileNameInput').value = profile.name;
-        document.getElementById('profileModal').classList.remove('hidden');
+    document.getElementById('openCreatePostBtn').addEventListener('click', () => {
+      document.getElementById('createPostModal').classList.remove('hidden');
+    });
+
+    document.getElementById('closeCreateModalBtn').addEventListener('click', closeCreateModal);
+
+    document.getElementById('imageUploadArea').addEventListener('click', () => {
+      document.getElementById('imageInput').click();
+    });
+
+    document.getElementById('imageInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        pendingImage = ev.target.result;
+        const area = document.getElementById('imageUploadArea');
+        area.classList.add('has-image');
+        area.innerHTML = `<img src="${pendingImage}" alt="preview">`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.getElementById('submitPostBtn').addEventListener('click', () => {
+      const title = document.getElementById('postTitleInput').value;
+      const body = document.getElementById('postBodyInput').value;
+      createPost(title, body, pendingImage);
+    });
+
+    document.getElementById('closePostViewBtn').addEventListener('click', () => {
+      document.getElementById('postViewModal').classList.add('hidden');
+      currentPostId = null;
+    });
+
+    document.querySelectorAll('.sort-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.sort-btn').forEach(x => x.classList.remove('active-sort'));
+        b.classList.add('active-sort');
+        currentSort = b.dataset.sort;
+        renderPosts();
       });
+    });
 
-      document.getElementById('closeProfileBtn').addEventListener('click', () => {
-        document.getElementById('profileModal').classList.add('hidden');
+    document.querySelectorAll('.sidebar-link[data-filter]').forEach(link => {
+      link.addEventListener('click', () => {
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+        currentFilter = link.dataset.filter;
+        renderPosts();
       });
+    });
 
-      document.getElementById('saveProfileBtn').addEventListener('click', () => {
-        const newName = document.getElementById('profileNameInput').value.trim();
-        if (newName) {
-          profile.name = newName;
-          saveProfile();
-          document.getElementById('profileNameDisplay').textContent = newName;
-          renderPosts();
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.classList.add('hidden');
+          if (overlay.id === 'postViewModal') currentPostId = null;
         }
       });
+    });
 
-      document.getElementById('settingsSidebarBtn').addEventListener('click', () => {
-        document.getElementById('languageFilter').value = settings.language;
-        document.getElementById('nsfwFilter').value = settings.nsfw;
-        document.getElementById('settingsModal').classList.remove('hidden');
-      });
-
-      document.getElementById('closeSettingsBtn').addEventListener('click', () => {
-        document.getElementById('settingsModal').classList.add('hidden');
-      });
-
-      document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-        settings.language = document.getElementById('languageFilter').value;
-        settings.nsfw = document.getElementById('nsfwFilter').value;
-        saveSettings();
-        document.getElementById('settingsModal').classList.add('hidden');
-        renderPosts();
-      });
-
-      document.getElementById('openCreatePostBtn').addEventListener('click', () => {
-        document.getElementById('createPostModal').classList.remove('hidden');
-      });
-
-      document.getElementById('closeCreateModalBtn').addEventListener('click', closeCreateModal);
-
-      document.getElementById('imageUploadArea').addEventListener('click', () => {
-        document.getElementById('imageInput').click();
-      });
-
-      document.getElementById('imageInput').addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-          pendingImage = ev.target.result;
-          const area = document.getElementById('imageUploadArea');
-          area.classList.add('has-image');
-          area.innerHTML = `<img src="${pendingImage}" alt="preview">`;
-        };
-        reader.readAsDataURL(file);
-      });
-
-      document.getElementById('submitPostBtn').addEventListener('click', () => {
-        const title = document.getElementById('postTitleInput').value;
-        const body = document.getElementById('postBodyInput').value;
-        createPost(title, body, pendingImage);
-      });
-
-      document.getElementById('closePostViewBtn').addEventListener('click', () => {
-        document.getElementById('postViewModal').classList.add('hidden');
-        currentPostId = null;
-        renderPosts();
-      });
-
-      document.querySelectorAll('.sort-btn').forEach(b => {
-        b.addEventListener('click', () => {
-          document.querySelectorAll('.sort-btn').forEach(x => x.classList.remove('active-sort'));
-          b.classList.add('active-sort');
-          currentSort = b.dataset.sort;
-          renderPosts();
-        });
-      });
-
-      document.querySelectorAll('.sidebar-link[data-filter]').forEach(link => {
-        link.addEventListener('click', () => {
-          document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-          link.classList.add('active');
-          currentFilter = link.dataset.filter;
-          renderPosts();
-        });
-      });
-
-      document.querySelectorAll('.modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', (e) => {
-          if (e.target === overlay) {
-            overlay.classList.add('hidden');
-            if (overlay.id === 'postViewModal') {
-              currentPostId = null;
-              renderPosts();
-            }
-          }
-        });
-      });
-
-      const bg = document.getElementById('speedBg');
-      function createBgLine() {
-        const line = document.createElement('div');
-        line.className = 'speed-line-bg';
-        line.style.top = Math.random()*100 + '%';
-        line.style.width = (Math.random()*180+80)+'px';
-        line.style.animationDuration = (Math.random()*4+3)+'s';
-        bg.appendChild(line);
-        setTimeout(() => line.remove(), 6000);
-      }
-      setInterval(createBgLine, 500);
-      for (let i=0;i<8;i++) setTimeout(createBgLine, i*250);
-    })();
+    // Фоновые линии
+    const bg = document.getElementById('speedBg');
+    function createBgLine() {
+      const line = document.createElement('div');
+      line.className = 'speed-line-bg';
+      line.style.top = Math.random()*100 + '%';
+      line.style.width = (Math.random()*180+80)+'px';
+      line.style.animationDuration = (Math.random()*4+3)+'s';
+      bg.appendChild(line);
+      setTimeout(() => line.remove(), 6000);
+    }
+    setInterval(createBgLine, 500);
+    for (let i=0;i<8;i++) setTimeout(createBgLine, i*250);
   </script>
 </body>
 </html>
